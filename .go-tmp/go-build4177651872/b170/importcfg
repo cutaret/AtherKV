@@ -1,0 +1,6 @@
+# import config
+packagefile os=D:\go\build-cache\b6\b66fd0334c384368eed21d7cb0a485e18ee8095aae83f0788edcd161a34c3df1-d
+packagefile runtime=D:\go\build-cache\2f\2fb2d66f2c64a9616e47a72ef36dd5b1c9625ade475598b384099a07c3fbc5df-d
+packagefile strconv=D:\go\build-cache\75\75403f6f4da26d8534778b2a06d4ff7e0b298ee259842dab31c714383255f395-d
+packagefile strings=D:\go\build-cache\21\21d9ccba71a7681174e6312ea4cedb69b138b60776de829dbb6888142058e701-d
+packagefile syscall=D:\go\build-cache\a5\a588e49bd369b78cd58250c3bccac0dbe8d5d8e4aa0aae60466a293aa520939b-d

@@ -1,0 +1,7 @@
+# import config
+packagefile encoding/asn1=D:\AtherKV\.go-tmp\go-build4177651872\b153\_pkg_.a
+packagefile encoding/hex=D:\go\build-cache\8e\8e826d9759b603faf21bc653228e378399e436b82212ddbfe1d8c752fdf5a95d-d
+packagefile fmt=D:\go\build-cache\48\48bbb50a58abe85afb70f640eaf05ae92990fd4b3602261e4135d443b4edcde1-d
+packagefile math/big=D:\go\build-cache\1e\1e201de11d94c7b9f221766cd39156e8378ffad5e9fc3e1a6e29fcf828239d6a-d
+packagefile strings=D:\go\build-cache\21\21d9ccba71a7681174e6312ea4cedb69b138b60776de829dbb6888142058e701-d
+packagefile time=D:\go\build-cache\97\976e05898f4756d7ff3fe53b9dba0a1221b4c78e0be0c358097738388eb4f538-d

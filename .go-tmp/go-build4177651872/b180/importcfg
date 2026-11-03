@@ -1,0 +1,3 @@
+# import config
+packagefile crypto/fips140=D:\go\build-cache\bf\bf07b80457faf29447d54e8c9ea36dbf61e411cfde68c31c43c4b2d657a01628-d
+packagefile sync/atomic=D:\go\build-cache\61\61d9d5f2ea8d3ea3e9d6c47668472d6b0199f77abed401f0171f030eb8142455-d

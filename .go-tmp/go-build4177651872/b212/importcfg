@@ -1,0 +1,6 @@
+# import config
+packagefile slices=D:\go\build-cache\09\09c5fc5b88ad008c3bf343ce350741a081e272d861b55391a14c47214f292fec-d
+packagefile strconv=D:\go\build-cache\75\75403f6f4da26d8534778b2a06d4ff7e0b298ee259842dab31c714383255f395-d
+packagefile strings=D:\go\build-cache\21\21d9ccba71a7681174e6312ea4cedb69b138b60776de829dbb6888142058e701-d
+packagefile time=D:\go\build-cache\97\976e05898f4756d7ff3fe53b9dba0a1221b4c78e0be0c358097738388eb4f538-d
+packagefile unicode/utf8=D:\go\build-cache\d8\d88e8bd13ef9786fd5ac0c9cc550ea26e411e7cbd9d553580d7206fae2d13fd3-d

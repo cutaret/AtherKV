@@ -1,0 +1,4 @@
+# import config
+packagefile runtime=D:\go\build-cache\2f\2fb2d66f2c64a9616e47a72ef36dd5b1c9625ade475598b384099a07c3fbc5df-d
+packagefile sync=D:\go\build-cache\e0\e0872717895d8faed1a1ed2a7b776bef549976c28dc1b7b163c5000f4cd8a5e6-d
+packagefile weak=D:\go\build-cache\23\238b081662c663e94dfa92c4e38327280f2bf56a4bbce037f7879355655fbd17-d

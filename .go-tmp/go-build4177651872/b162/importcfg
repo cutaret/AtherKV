@@ -1,0 +1,7 @@
+# import config
+packagefile crypto/internal/boring=D:\go\build-cache\19\19d9b5b3d177ece72405771bcd30c063a2dd17da9a1f54a508ac85895997de4c-d
+packagefile crypto/internal/fips140/hmac=D:\go\build-cache\d7\d7005c6869b06c40d734f719f5b8ddfccc4eec48693c3012de0f6d28b8fec1e0-d
+packagefile crypto/internal/fips140hash=D:\AtherKV\.go-tmp\go-build4177651872\b149\_pkg_.a
+packagefile crypto/internal/fips140only=D:\go\build-cache\82\8261fbd42148e5ce2ae8948575a21acc2b39c0270c69c7f915c3d8c1e50e912a-d
+packagefile crypto/subtle=D:\go\build-cache\42\4263b425aefac47329cba050dd3e1db4f05553492f8bd57b2d31e264b473775c-d
+packagefile hash=D:\go\build-cache\99\99d00957cd57ecfebb3275cfcd35987db984de17805a857a51b8cdf1327761d8-d

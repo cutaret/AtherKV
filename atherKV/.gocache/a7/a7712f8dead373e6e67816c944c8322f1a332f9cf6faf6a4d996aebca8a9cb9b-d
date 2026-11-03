@@ -1,0 +1,28 @@
+=== RUN   TestS1_BugZoo_All8PlantedBugs
+=== RUN   TestS1_BugZoo_All8PlantedBugs/Zoo_01_Figure8_CommitEarlierTerm
+    zoo_s1_test.go:86: [ZOO #1 CAUGHT] seed=1 seeds_to_detect=1 detector=StateMachineSafety details=conflicting entries committed at index 1: (term=2, data="fig8_old") vs (term=3, data="fig8_new_leader")
+=== RUN   TestS1_BugZoo_All8PlantedBugs/Zoo_02_ReplyVoteBeforePersist
+    zoo_s1_test.go:103: [ZOO #2 CAUGHT] seed=1 seeds_to_detect=1 detector=TermMonotonicity details=node n1 term decreased from 1 to 0 after restart
+=== RUN   TestS1_BugZoo_All8PlantedBugs/Zoo_03_AckAppendBeforeFsync
+    zoo_s1_test.go:164: [ZOO #3 CAUGHT] seed=1 seeds_to_detect=1 detector=ElectionSafety details=two leaders elected in term 1: n1 and n2
+=== RUN   TestS1_BugZoo_All8PlantedBugs/Zoo_04_TruncateOnStaleReorderedAppend
+    zoo_s1_test.go:199: [ZOO #4 CAUGHT] seed=4 seeds_to_detect=1 detector=CommittedDurability details=leader n2 (term 3) is missing committed entry at index 2 (committed in term 2)
+=== RUN   TestS1_BugZoo_All8PlantedBugs/Zoo_05_BlindLeaderReadUnderPartition
+    zoo_s1_test.go:211: [ZOO #5 CAUGHT] seed=5 seeds_to_detect=1 detector=PorcupineLinearizability details=non-linearizable history on key "k1" (2 minimal ops): [op#2 c=2 PUT(k1) in="v2" exp="" out="" t=[30..40]] [op#3 c=1 GET(k1) in="" exp="" out="v1" t=[50..60]]
+=== RUN   TestS1_BugZoo_All8PlantedBugs/Zoo_06_LeaseReadUnderClockSkew
+    zoo_s1_test.go:284: [ZOO #6 CAUGHT] seed=606 seeds_to_detect=1 detector=PorcupineLinearizability details=non-linearizable history on key "k1" (2 minimal ops): [op#2 c=2 PUT(k1) in="v2" exp="" out="" t=[155000000..165000000]] [op#3 c=3 GET(k1) in="" exp="" out="v1" t=[170000000..171000000]]
+=== RUN   TestS1_BugZoo_All8PlantedBugs/Zoo_07_NoClientSessionDedup
+    zoo_s1_test.go:314: [ZOO #7 CAUGHT] seed=707 seeds_to_detect=1 detector=PorcupineLinearizability details=non-linearizable history on key "k1" (2 minimal ops): [op#1 c=1 PUT(k1) in="v1" exp="" out="" t=[10..20]] [op#2 c=2 GET(k1) in="" exp="" out="" t=[30..40]]
+=== RUN   TestS1_BugZoo_All8PlantedBugs/Zoo_13_EvenClusterQuorum_WithScheduleShrinker
+    zoo_s1_test.go:337: [ZOO #13 CAUGHT] seed=4 seeds_to_detect=4 detector=CommittedDurability shrinker=20->2_faults details=leader n3 (term 5) is missing committed entry at index 1 (committed in term 3)
+--- PASS: TestS1_BugZoo_All8PlantedBugs (0.39s)
+    --- PASS: TestS1_BugZoo_All8PlantedBugs/Zoo_01_Figure8_CommitEarlierTerm (0.00s)
+    --- PASS: TestS1_BugZoo_All8PlantedBugs/Zoo_02_ReplyVoteBeforePersist (0.00s)
+    --- PASS: TestS1_BugZoo_All8PlantedBugs/Zoo_03_AckAppendBeforeFsync (0.00s)
+    --- PASS: TestS1_BugZoo_All8PlantedBugs/Zoo_04_TruncateOnStaleReorderedAppend (0.00s)
+    --- PASS: TestS1_BugZoo_All8PlantedBugs/Zoo_05_BlindLeaderReadUnderPartition (0.00s)
+    --- PASS: TestS1_BugZoo_All8PlantedBugs/Zoo_06_LeaseReadUnderClockSkew (0.00s)
+    --- PASS: TestS1_BugZoo_All8PlantedBugs/Zoo_07_NoClientSessionDedup (0.00s)
+    --- PASS: TestS1_BugZoo_All8PlantedBugs/Zoo_13_EvenClusterQuorum_WithScheduleShrinker (0.39s)
+PASS
+ok  	github.com/cutaret/aetherkv/zoo	1.490s

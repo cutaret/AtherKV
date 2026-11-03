@@ -1,0 +1,7 @@
+# import config
+packagefile context=D:\go\build-cache\3c\3cd6b0c9f315cf14465fdb1b65247c9092d875932bcf1d67172d93a7735d59ab-d
+packagefile crypto/tls=D:\AtherKV\.go-tmp\go-build4177651872\b129\_pkg_.a
+packagefile internal/nettrace=D:\go\build-cache\1e\1e5f94dff5e38832ff70a204decc4e1ca9c435da5ce0e1ff4506f505a878ded1-d
+packagefile net=D:\go\build-cache\02\027eb7104cd1bf8ae9f73ea3031e6de09091cea7eb1285786759e4c8b39ca663-d
+packagefile net/textproto=D:\AtherKV\.go-tmp\go-build4177651872\b201\_pkg_.a
+packagefile time=D:\go\build-cache\97\976e05898f4756d7ff3fe53b9dba0a1221b4c78e0be0c358097738388eb4f538-d

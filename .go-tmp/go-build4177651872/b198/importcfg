@@ -1,0 +1,9 @@
+# import config
+packagefile fmt=D:\go\build-cache\48\48bbb50a58abe85afb70f640eaf05ae92990fd4b3602261e4135d443b4edcde1-d
+packagefile io=D:\go\build-cache\d4\d40934532f0e99d154c844dcc6374affb8ec5cee1b54d814e51183a0e221f845-d
+packagefile log/internal=D:\AtherKV\.go-tmp\go-build4177651872\b199\_pkg_.a
+packagefile os=D:\go\build-cache\b6\b66fd0334c384368eed21d7cb0a485e18ee8095aae83f0788edcd161a34c3df1-d
+packagefile runtime=D:\go\build-cache\2f\2fb2d66f2c64a9616e47a72ef36dd5b1c9625ade475598b384099a07c3fbc5df-d
+packagefile sync=D:\go\build-cache\e0\e0872717895d8faed1a1ed2a7b776bef549976c28dc1b7b163c5000f4cd8a5e6-d
+packagefile sync/atomic=D:\go\build-cache\61\61d9d5f2ea8d3ea3e9d6c47668472d6b0199f77abed401f0171f030eb8142455-d
+packagefile time=D:\go\build-cache\97\976e05898f4756d7ff3fe53b9dba0a1221b4c78e0be0c358097738388eb4f538-d

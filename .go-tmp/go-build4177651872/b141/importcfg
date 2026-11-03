@@ -1,0 +1,6 @@
+# import config
+packagefile crypto/internal/fips140/nistec=D:\AtherKV\.go-tmp\go-build4177651872\b134\_pkg_.a
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile io=D:\go\build-cache\d4\d40934532f0e99d154c844dcc6374affb8ec5cee1b54d814e51183a0e221f845-d
+packagefile math/big=D:\go\build-cache\1e\1e201de11d94c7b9f221766cd39156e8378ffad5e9fc3e1a6e29fcf828239d6a-d
+packagefile sync=D:\go\build-cache\e0\e0872717895d8faed1a1ed2a7b776bef549976c28dc1b7b163c5000f4cd8a5e6-d

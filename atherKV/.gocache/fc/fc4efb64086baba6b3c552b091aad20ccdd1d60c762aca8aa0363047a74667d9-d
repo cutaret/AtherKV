@@ -1,0 +1,6 @@
+./clock.go
+./interfaces.go
+./kernel.go
+./net.go
+./prng.go
+./trace.go

@@ -1,0 +1,10 @@
+# import config
+packagefile bytes=D:\go\build-cache\55\55ee4f39787292c492e3dc0d5d55e275187030198bdd5ee307720a192f0f9514-d
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile fmt=D:\go\build-cache\48\48bbb50a58abe85afb70f640eaf05ae92990fd4b3602261e4135d443b4edcde1-d
+packagefile internal/godebug=D:\go\build-cache\cd\cd2f37ac75c1e6f09e82eab7a8baae0e59a98b4ea6208eb9dd5a984db5f2eae8-d
+packagefile net/netip=D:\go\build-cache\03\0390584952bffea50eef96b06566ca626e54f55cf8fa01f7c0647af8520dbee0-d
+packagefile path=D:\go\build-cache\89\89ffda6a26bfc4688fc29066b8e421b2d753d79a4d40eea15d8fba74dc0e3e38-d
+packagefile slices=D:\go\build-cache\09\09c5fc5b88ad008c3bf343ce350741a081e272d861b55391a14c47214f292fec-d
+packagefile strconv=D:\go\build-cache\75\75403f6f4da26d8534778b2a06d4ff7e0b298ee259842dab31c714383255f395-d
+packagefile strings=D:\go\build-cache\21\21d9ccba71a7681174e6312ea4cedb69b138b60776de829dbb6888142058e701-d

@@ -1,0 +1,15 @@
+# import config
+packagefile bytes=D:\go\build-cache\55\55ee4f39787292c492e3dc0d5d55e275187030198bdd5ee307720a192f0f9514-d
+packagefile crypto/internal/constanttime=D:\go\build-cache\85\858cbdb4f5da23c081040200a3e106c99a647f599efd17ab1e555fec1c7cc2cf-d
+packagefile crypto/internal/fips140=D:\go\build-cache\15\15b1744df21d73ab45911cb77fda1abe586fe37009be3360c9ac403981b8e749-d
+packagefile crypto/internal/fips140/bigmod=D:\AtherKV\.go-tmp\go-build4177651872\b146\_pkg_.a
+packagefile crypto/internal/fips140/check=D:\go\build-cache\ec\ecd32fe7fad4d827b84fa1d9cec7b53f192422abe931e0c33ed9bc8edb095a8f-d
+packagefile crypto/internal/fips140/drbg=D:\go\build-cache\5e\5e20755d0e7add66b087b172bb38423efb0ad0c87b30740f8fe19b9fc6576800-d
+packagefile crypto/internal/fips140/sha256=D:\go\build-cache\ce\cea1768e40e6a2b68d00eb39eae126280533f6011ce1a05dfa7232b423757b2d-d
+packagefile crypto/internal/fips140/sha3=D:\go\build-cache\f7\f7259901a205bb0c7c419742186d3ef41581b65c21e8bf666874197b95e81e55-d
+packagefile crypto/internal/fips140/sha512=D:\go\build-cache\08\085694f139203d3a2d09dcf63adbe66a4b2e66af2ab8f4457b0c6d3fbbdfc803-d
+packagefile crypto/internal/fips140/subtle=D:\go\build-cache\7c\7cbab3f93d46f46e67981427c2a6f79b0d1be3d3d933f9b7f456d66b576c5cf6-d
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile hash=D:\go\build-cache\99\99d00957cd57ecfebb3275cfcd35987db984de17805a857a51b8cdf1327761d8-d
+packagefile io=D:\go\build-cache\d4\d40934532f0e99d154c844dcc6374affb8ec5cee1b54d814e51183a0e221f845-d
+packagefile sync=D:\go\build-cache\e0\e0872717895d8faed1a1ed2a7b776bef549976c28dc1b7b163c5000f4cd8a5e6-d

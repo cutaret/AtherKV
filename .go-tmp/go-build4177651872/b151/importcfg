@@ -1,0 +1,5 @@
+# import config
+packagefile crypto=D:\go\build-cache\ac\ac6948e4cfc139b94696b9900d3ba916cb1880c9061db56328b9a150b88ea24a-d
+packagefile crypto/internal/boring=D:\go\build-cache\19\19d9b5b3d177ece72405771bcd30c063a2dd17da9a1f54a508ac85895997de4c-d
+packagefile crypto/internal/fips140/sha512=D:\go\build-cache\08\085694f139203d3a2d09dcf63adbe66a4b2e66af2ab8f4457b0c6d3fbbdfc803-d
+packagefile hash=D:\go\build-cache\99\99d00957cd57ecfebb3275cfcd35987db984de17805a857a51b8cdf1327761d8-d

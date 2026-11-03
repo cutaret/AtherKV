@@ -1,0 +1,22 @@
+# import config
+importmap golang.org/x/crypto/chacha20poly1305=vendor/golang.org/x/crypto/chacha20poly1305
+packagefile bytes=D:\go\build-cache\55\55ee4f39787292c492e3dc0d5d55e275187030198bdd5ee307720a192f0f9514-d
+packagefile crypto=D:\go\build-cache\ac\ac6948e4cfc139b94696b9900d3ba916cb1880c9061db56328b9a150b88ea24a-d
+packagefile crypto/cipher=D:\go\build-cache\c4\c4e8909148737a839e880174b21d88203cbc4cc9d9a1d98a4ed1115ffe23b579-d
+packagefile crypto/ecdh=D:\AtherKV\.go-tmp\go-build4177651872\b132\_pkg_.a
+packagefile crypto/fips140=D:\go\build-cache\bf\bf07b80457faf29447d54e8c9ea36dbf61e411cfde68c31c43c4b2d657a01628-d
+packagefile crypto/hkdf=D:\AtherKV\.go-tmp\go-build4177651872\b160\_pkg_.a
+packagefile crypto/internal/fips140/aes=D:\go\build-cache\c8\c864b86997965a616f0b447c20b9e1a627fe9bccc6e587fa38c289a55421b27a-d
+packagefile crypto/internal/fips140/aes/gcm=D:\go\build-cache\ca\caa3436f0a4f3f9e53fe04d93abdf36833409a991c315a7c662b7fbf31e33749-d
+packagefile crypto/internal/fips140/drbg=D:\go\build-cache\5e\5e20755d0e7add66b087b172bb38423efb0ad0c87b30740f8fe19b9fc6576800-d
+packagefile crypto/internal/rand=D:\AtherKV\.go-tmp\go-build4177651872\b137\_pkg_.a
+packagefile crypto/mlkem=D:\AtherKV\.go-tmp\go-build4177651872\b164\_pkg_.a
+packagefile crypto/sha256=D:\go\build-cache\f6\f6ef5aa93db909a216227407ef284d108c98396e2541cad1ef7e45f0a188b8e7-d
+packagefile crypto/sha3=D:\AtherKV\.go-tmp\go-build4177651872\b150\_pkg_.a
+packagefile crypto/sha512=D:\AtherKV\.go-tmp\go-build4177651872\b151\_pkg_.a
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile fmt=D:\go\build-cache\48\48bbb50a58abe85afb70f640eaf05ae92990fd4b3602261e4135d443b4edcde1-d
+packagefile vendor/golang.org/x/crypto/chacha20poly1305=D:\AtherKV\.go-tmp\go-build4177651872\b166\_pkg_.a
+packagefile hash=D:\go\build-cache\99\99d00957cd57ecfebb3275cfcd35987db984de17805a857a51b8cdf1327761d8-d
+packagefile internal/byteorder=D:\go\build-cache\45\457665f5d1870b8bd42b9c069f13c79e28a121e331e05268278fbdf1523f194f-d
+packagefile slices=D:\go\build-cache\09\09c5fc5b88ad008c3bf343ce350741a081e272d861b55391a14c47214f292fec-d

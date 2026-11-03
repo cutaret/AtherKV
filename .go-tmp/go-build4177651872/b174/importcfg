@@ -1,0 +1,5 @@
+# import config
+packagefile crypto=D:\go\build-cache\ac\ac6948e4cfc139b94696b9900d3ba916cb1880c9061db56328b9a150b88ea24a-d
+packagefile crypto/internal/fips140/mldsa=D:\AtherKV\.go-tmp\go-build4177651872\b175\_pkg_.a
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile io=D:\go\build-cache\d4\d40934532f0e99d154c844dcc6374affb8ec5cee1b54d814e51183a0e221f845-d

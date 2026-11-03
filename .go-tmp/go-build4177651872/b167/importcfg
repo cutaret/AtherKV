@@ -1,0 +1,8 @@
+# import config
+importmap golang.org/x/crypto/internal/alias=vendor/golang.org/x/crypto/internal/alias
+packagefile crypto/cipher=D:\go\build-cache\c4\c4e8909148737a839e880174b21d88203cbc4cc9d9a1d98a4ed1115ffe23b579-d
+packagefile encoding/binary=D:\go\build-cache\c4\c49bd0875c01bc624a69bcd1910c0d2487c7a01d24318c4a30c6c1329a8964b2-d
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile vendor/golang.org/x/crypto/internal/alias=D:\AtherKV\.go-tmp\go-build4177651872\b168\_pkg_.a
+packagefile math/bits=D:\go\build-cache\13\13b1fc501599601a58f32dc188937de859c19e79f638828d4fec3aeca6e92a6c-d
+packagefile runtime=D:\go\build-cache\2f\2fb2d66f2c64a9616e47a72ef36dd5b1c9625ade475598b384099a07c3fbc5df-d

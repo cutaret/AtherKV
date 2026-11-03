@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AetherKV Trace Viewer — Bug Zoo #13 Deterministic Replay (Seed 4)</title>
+<style>
+  body { background: #0d1117; color: #c9d1d9; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; margin: 24px; }
+  h1, h2 { color: #58a6ff; margin-bottom: 8px; }
+  .banner { background: #3d161b; border: 1px solid #f85149; padding: 14px; border-radius: 6px; margin-bottom: 20px; }
+  .banner strong { color: #ff7b72; }
+  .stats { display: flex; gap: 16px; margin-bottom: 20px; }
+  .card { background: #161b22; border: 1px solid #30363d; padding: 12px 16px; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; background: #161b22; border: 1px solid #30363d; margin-bottom: 24px; font-size: 13px; }
+  th, td { padding: 8px 12px; border-bottom: 1px solid #21262d; text-align: left; }
+  th { background: #21262d; color: #79c0ff; }
+  .badge-fault { background: #6e40c9; color: #fff; padding: 2px 6px; border-radius: 4px; }
+  .badge-drop { background: #9e6a03; color: #fff; padding: 2px 6px; border-radius: 4px; }
+  .badge-exec { background: #238636; color: #fff; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>AetherKV Deterministic Simulation Trace Viewer</h1>
+<div class="banner">
+  <div><strong>Title:</strong> Bug Zoo #13 Deterministic Replay</div>
+  <div><strong>Firing Detector:</strong> CommittedDurability</div>
+  <div><strong>Violation Explanation:</strong> leader n3 (term 5) is missing committed entry at index 1 (committed in term 3)</div>
+</div>
+<div class="stats">
+  <div class="card"><strong>Master Seed:</strong> 4</div>
+  <div class="card"><strong>Cluster Size:</strong> 4 Nodes</div>
+  <div class="card"><strong>Schedule Shrinking:</strong> 20 &rarr; 3 Minimal Faults</div>
+  <div class="card"><strong>Recorded Events:</strong> 0</div>
+</div>
+<h2>Shrunk Minimal Nemesis Fault Schedule</h2>
+<table>
+  <thead><tr><th>Fault ID</th><th>Virtual Time (ms)</th><th>Fault Type</th><th>Target A</th><th>Target B</th></tr></thead>
+  <tbody>
+    <tr><td>#6</td><td>138.132 ms</td><td><span class="badge-fault">partition_sym</span></td><td>n4</td><td>n3</td></tr>
+    <tr><td>#8</td><td>182.243 ms</td><td><span class="badge-fault">partition_sym</span></td><td>n4</td><td>n1</td></tr>
+    <tr><td>#13</td><td>260.608 ms</td><td><span class="badge-fault">partition_asym</span></td><td>n2</td><td>n1</td></tr>
+  </tbody>
+</table>
+<h2>Step-by-Step Event Timeline</h2>
+<table>
+  <thead><tr><th>Seq #</th><th>Virtual Time (ms)</th><th>Node</th><th>Event Kind</th><th>Details</th></tr></thead>
+  <tbody>
+  </tbody>
+</table>
+</body>
+</html>

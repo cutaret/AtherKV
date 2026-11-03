@@ -1,0 +1,7 @@
+# import config
+importmap golang.org/x/net/idna=vendor/golang.org/x/net/idna
+packagefile vendor/golang.org/x/net/idna=D:\AtherKV\.go-tmp\go-build4177651872\b194\_pkg_.a
+packagefile net=D:\go\build-cache\02\027eb7104cd1bf8ae9f73ea3031e6de09091cea7eb1285786759e4c8b39ca663-d
+packagefile net/textproto=D:\AtherKV\.go-tmp\go-build4177651872\b201\_pkg_.a
+packagefile strings=D:\go\build-cache\21\21d9ccba71a7681174e6312ea4cedb69b138b60776de829dbb6888142058e701-d
+packagefile unicode/utf8=D:\go\build-cache\d8\d88e8bd13ef9786fd5ac0c9cc550ea26e411e7cbd9d553580d7206fae2d13fd3-d

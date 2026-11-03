@@ -1,0 +1,12 @@
+# import config
+packagefile crypto=D:\go\build-cache\ac\ac6948e4cfc139b94696b9900d3ba916cb1880c9061db56328b9a150b88ea24a-d
+packagefile crypto/internal/fips140/ed25519=D:\AtherKV\.go-tmp\go-build4177651872\b157\_pkg_.a
+packagefile crypto/internal/fips140cache=D:\AtherKV\.go-tmp\go-build4177651872\b147\_pkg_.a
+packagefile crypto/internal/fips140only=D:\go\build-cache\82\8261fbd42148e5ce2ae8948575a21acc2b39c0270c69c7f915c3d8c1e50e912a-d
+packagefile crypto/internal/rand=D:\AtherKV\.go-tmp\go-build4177651872\b137\_pkg_.a
+packagefile crypto/rand=D:\AtherKV\.go-tmp\go-build4177651872\b159\_pkg_.a
+packagefile crypto/subtle=D:\go\build-cache\42\4263b425aefac47329cba050dd3e1db4f05553492f8bd57b2d31e264b473775c-d
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile internal/godebug=D:\go\build-cache\cd\cd2f37ac75c1e6f09e82eab7a8baae0e59a98b4ea6208eb9dd5a984db5f2eae8-d
+packagefile io=D:\go\build-cache\d4\d40934532f0e99d154c844dcc6374affb8ec5cee1b54d814e51183a0e221f845-d
+packagefile strconv=D:\go\build-cache\75\75403f6f4da26d8534778b2a06d4ff7e0b298ee259842dab31c714383255f395-d

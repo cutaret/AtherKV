@@ -1,0 +1,7 @@
+# import config
+packagefile crypto=D:\go\build-cache\ac\ac6948e4cfc139b94696b9900d3ba916cb1880c9061db56328b9a150b88ea24a-d
+packagefile crypto/internal/fips140only=D:\go\build-cache\82\8261fbd42148e5ce2ae8948575a21acc2b39c0270c69c7f915c3d8c1e50e912a-d
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile hash=D:\go\build-cache\99\99d00957cd57ecfebb3275cfcd35987db984de17805a857a51b8cdf1327761d8-d
+packagefile internal/byteorder=D:\go\build-cache\45\457665f5d1870b8bd42b9c069f13c79e28a121e331e05268278fbdf1523f194f-d
+packagefile math/bits=D:\go\build-cache\13\13b1fc501599601a58f32dc188937de859c19e79f638828d4fec3aeca6e92a6c-d

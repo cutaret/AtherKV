@@ -1,0 +1,5 @@
+# import config
+packagefile crypto/internal/fips140/alias=D:\go\build-cache\87\87b21b7307739ebd2d67baa283cb8fd05314296be5894b8c2120a62c0cf12827-d
+packagefile crypto/internal/fips140only=D:\go\build-cache\82\8261fbd42148e5ce2ae8948575a21acc2b39c0270c69c7f915c3d8c1e50e912a-d
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile strconv=D:\go\build-cache\75\75403f6f4da26d8534778b2a06d4ff7e0b298ee259842dab31c714383255f395-d

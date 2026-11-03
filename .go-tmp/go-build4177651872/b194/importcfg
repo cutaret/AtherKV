@@ -1,0 +1,12 @@
+# import config
+importmap golang.org/x/text/secure/bidirule=vendor/golang.org/x/text/secure/bidirule
+importmap golang.org/x/text/unicode/bidi=vendor/golang.org/x/text/unicode/bidi
+importmap golang.org/x/text/unicode/norm=vendor/golang.org/x/text/unicode/norm
+packagefile fmt=D:\go\build-cache\48\48bbb50a58abe85afb70f640eaf05ae92990fd4b3602261e4135d443b4edcde1-d
+packagefile vendor/golang.org/x/text/secure/bidirule=D:\AtherKV\.go-tmp\go-build4177651872\b195\_pkg_.a
+packagefile vendor/golang.org/x/text/unicode/bidi=D:\AtherKV\.go-tmp\go-build4177651872\b197\_pkg_.a
+packagefile vendor/golang.org/x/text/unicode/norm=D:\AtherKV\.go-tmp\go-build4177651872\b200\_pkg_.a
+packagefile math=D:\go\build-cache\38\3896bb3bd80072a47dbada194b1056d805ea51d27eee83f725410f6d5682713b-d
+packagefile strings=D:\go\build-cache\21\21d9ccba71a7681174e6312ea4cedb69b138b60776de829dbb6888142058e701-d
+packagefile unicode=D:\go\build-cache\25\25349aeee3857923318c41b0c1a0ad095ebc817c3eec80cbb9fde0de3849d8ee-d
+packagefile unicode/utf8=D:\go\build-cache\d8\d88e8bd13ef9786fd5ac0c9cc550ea26e411e7cbd9d553580d7206fae2d13fd3-d

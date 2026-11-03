@@ -15,22 +15,22 @@ import (
 )
 
 const (
-	RecordHeaderSize = 25               // 4 (CRC) + 4 (Len) + 1 (Type) + 8 (Term) + 8 (Index)
-	SegmentMaxBytes  = 64 * 1024 * 1024 // 64 MB per WAL segment
+	RecordHeaderSize = 25
+	SegmentMaxBytes  = 64 * 1024 * 1024
 	TypeEntry        = 1
 )
 
 var crcTable = crc32.MakeTable(crc32.Castagnoli)
 
-// SegmentedWAL manages segmented append-only log files backed by vfs.FS.
 type SegmentedWAL struct {
 	fs          vfs.FS
 	dir         string
 	activeFile  vfs.File
 	activeSegID uint64
 	activeBytes int64
+	firstIndex  uint64
 	lastIndex   uint64
-	entries     map[uint64]raft.Entry // In-memory index of log entries
+	entries     map[uint64]raft.Entry
 }
 
 func Open(fs vfs.FS, dir string) (*SegmentedWAL, error) {
@@ -39,9 +39,10 @@ func Open(fs vfs.FS, dir string) (*SegmentedWAL, error) {
 	}
 
 	w := &SegmentedWAL{
-		fs:      fs,
-		dir:     dir,
-		entries: make(map[uint64]raft.Entry),
+		fs:         fs,
+		dir:        dir,
+		firstIndex: 1,
+		entries:    make(map[uint64]raft.Entry),
 	}
 
 	if err := w.recover(); err != nil {
@@ -76,7 +77,7 @@ func (w *SegmentedWAL) recover() error {
 		return w.createNewSegment(1)
 	}
 
-	// Scan through all segments in order
+	var minIdx uint64
 	for _, id := range segIDs {
 		path := w.segmentPath(id)
 		f, err := w.fs.Open(path)
@@ -84,12 +85,17 @@ func (w *SegmentedWAL) recover() error {
 			return err
 		}
 
+		fileSize, szErr := f.Size()
+		if szErr != nil {
+			_ = f.Close()
+			return szErr
+		}
+
 		var offset int64
 		for {
 			var hdr [RecordHeaderSize]byte
 			n, rErr := f.ReadAt(hdr[:], offset)
 			if rErr == io.EOF || n < RecordHeaderSize {
-				// Clean EOF or torn partial header at tail -> truncate and stop
 				_ = f.Truncate(offset)
 				break
 			}
@@ -100,20 +106,22 @@ func (w *SegmentedWAL) recover() error {
 			term := binary.LittleEndian.Uint64(hdr[9:17])
 			index := binary.LittleEndian.Uint64(hdr[17:25])
 
-			payload := make([]byte, length)
-			pn, pErr := f.ReadAt(payload, offset+RecordHeaderSize)
-			if pErr != nil || uint32(pn) < length {
-				// Torn write on payload -> truncate to offset and stop
+			if int64(length) > SegmentMaxBytes || offset+RecordHeaderSize+int64(length) > fileSize {
 				_ = f.Truncate(offset)
 				break
 			}
 
-			// Validate CRC over [Type | Term | Index | Payload]
+			payload := make([]byte, length)
+			pn, pErr := f.ReadAt(payload, offset+RecordHeaderSize)
+			if pErr != nil || uint32(pn) < length {
+				_ = f.Truncate(offset)
+				break
+			}
+
 			h := crc32.New(crcTable)
 			h.Write(hdr[8:RecordHeaderSize])
 			h.Write(payload)
 			if h.Sum32() != expectedCRC {
-				// Corrupted record -> truncate to last valid offset
 				_ = f.Truncate(offset)
 				break
 			}
@@ -123,6 +131,9 @@ func (w *SegmentedWAL) recover() error {
 					Term:  term,
 					Index: index,
 					Data:  payload,
+				}
+				if minIdx == 0 || index < minIdx {
+					minIdx = index
 				}
 				w.lastIndex = max(w.lastIndex, index)
 			}
@@ -138,6 +149,9 @@ func (w *SegmentedWAL) recover() error {
 		}
 	}
 
+	if minIdx > 0 {
+		w.firstIndex = minIdx
+	}
 	return nil
 }
 
@@ -200,7 +214,6 @@ func (w *SegmentedWAL) Append(entries []raft.Entry) error {
 	return nil
 }
 
-// TruncateSuffix removes all entries starting from fromIndex (used when follower encounters conflict).
 func (w *SegmentedWAL) TruncateSuffix(fromIndex uint64) {
 	for idx := fromIndex; idx <= w.lastIndex; idx++ {
 		delete(w.entries, idx)
@@ -209,6 +222,33 @@ func (w *SegmentedWAL) TruncateSuffix(fromIndex uint64) {
 		w.lastIndex = fromIndex - 1
 	} else {
 		w.lastIndex = 0
+	}
+	w.rewriteActive()
+}
+
+// CompactPrefix deletes all Raft log entries <= upToIndex (used after snapshot creation or LSM flush).
+func (w *SegmentedWAL) CompactPrefix(upToIndex uint64) {
+	for idx := w.firstIndex; idx <= upToIndex; idx++ {
+		delete(w.entries, idx)
+	}
+	if upToIndex+1 > w.firstIndex {
+		w.firstIndex = upToIndex + 1
+	}
+	w.rewriteActive()
+	_ = w.Sync()
+}
+
+func (w *SegmentedWAL) rewriteActive() {
+	var surviving []raft.Entry
+	for idx := w.firstIndex; idx <= w.lastIndex; idx++ {
+		if e, ok := w.entries[idx]; ok {
+			surviving = append(surviving, e)
+		}
+	}
+	if w.activeFile != nil {
+		_ = w.activeFile.Truncate(0)
+		w.activeBytes = 0
+		_ = w.Append(surviving)
 	}
 }
 
@@ -219,9 +259,8 @@ func (w *SegmentedWAL) Sync() error {
 	return nil
 }
 
-func (w *SegmentedWAL) LastIndex() uint64 {
-	return w.lastIndex
-}
+func (w *SegmentedWAL) FirstIndex() uint64 { return w.firstIndex }
+func (w *SegmentedWAL) LastIndex() uint64  { return w.lastIndex }
 
 func (w *SegmentedWAL) GetEntry(index uint64) (raft.Entry, bool) {
 	e, ok := w.entries[index]

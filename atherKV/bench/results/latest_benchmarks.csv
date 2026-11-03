@@ -1,0 +1,11 @@
+suite,workload,runs,median_ops_per_sec,spread_ops_per_sec,median_mib_per_sec,p50_us,p99_us,p999_us,write_amplification,total_fsyncs
+YCSB_LSM,YCSB-A (50% Put / 50% Get),5,59803.25,62147.11,14.60,0.00,577.20,2822.30,3.47,0
+YCSB_LSM,YCSB-B (5% Put / 95% Get),5,154565.48,399912912.85,37.74,0.00,0.00,2020.40,3.45,0
+YCSB_LSM,YCSB-E (5% Put / 95% Scan),5,11041.61,2316.69,2.70,0.00,2827.70,6105.80,3.49,0
+Cluster_3Node_Raft_LSM,50%_Write_50%_Linearizable_ReadIndex,5,6962.56,1796.52,0.00,0.00,4165.50,6556.00,1.00,0
+Durability_Coupling,Option_A_DualFsync (Raft WAL + LSM WAL),5,21657.91,9477.55,0.00,0.00,1784.20,5348.70,1.00,401
+Durability_Coupling,Option_B_SingleFsync (Raft WAL + FlushedIndex),5,28480.70,107356.94,0.00,0.00,1497.90,5756.30,1.00,201
+Llama3_8B_KVCache,128KiB_Llama3_1Token_Inline,5,650.79,320.40,81.35,543.80,8684.00,9031.10,4.50,0
+Llama3_8B_KVCache,128KiB_Llama3_1Token_WiscKeySeparated,5,2259.67,2812.21,282.46,540.70,2259.20,2719.00,1.00,0
+Llama3_8B_KVCache,2MiB_Llama3_16TokenBlock_Inline,5,67.41,21.14,134.83,8019.70,35957.60,35957.60,3.67,0
+Llama3_8B_KVCache,2MiB_Llama3_16TokenBlock_WiscKeySeparated,5,293.45,6.11,586.90,2887.60,8090.90,8090.90,1.00,0

@@ -1,0 +1,6 @@
+# import config
+packagefile crypto/internal/boring=D:\go\build-cache\19\19d9b5b3d177ece72405771bcd30c063a2dd17da9a1f54a508ac85895997de4c-d
+packagefile crypto/internal/fips140/drbg=D:\go\build-cache\5e\5e20755d0e7add66b087b172bb38423efb0ad0c87b30740f8fe19b9fc6576800-d
+packagefile crypto/internal/randutil=D:\AtherKV\.go-tmp\go-build4177651872\b138\_pkg_.a
+packagefile internal/godebug=D:\go\build-cache\cd\cd2f37ac75c1e6f09e82eab7a8baae0e59a98b4ea6208eb9dd5a984db5f2eae8-d
+packagefile io=D:\go\build-cache\d4\d40934532f0e99d154c844dcc6374affb8ec5cee1b54d814e51183a0e221f845-d

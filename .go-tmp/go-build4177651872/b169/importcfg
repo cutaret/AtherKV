@@ -1,0 +1,4 @@
+# import config
+packagefile crypto/subtle=D:\go\build-cache\42\4263b425aefac47329cba050dd3e1db4f05553492f8bd57b2d31e264b473775c-d
+packagefile encoding/binary=D:\go\build-cache\c4\c49bd0875c01bc624a69bcd1910c0d2487c7a01d24318c4a30c6c1329a8964b2-d
+packagefile math/bits=D:\go\build-cache\13\13b1fc501599601a58f32dc188937de859c19e79f638828d4fec3aeca6e92a6c-d

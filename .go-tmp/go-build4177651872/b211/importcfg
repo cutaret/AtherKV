@@ -1,0 +1,15 @@
+# import config
+importmap golang.org/x/net/http/httpguts=vendor/golang.org/x/net/http/httpguts
+importmap golang.org/x/net/http2/hpack=vendor/golang.org/x/net/http2/hpack
+packagefile context=D:\go\build-cache\3c\3cd6b0c9f315cf14465fdb1b65247c9092d875932bcf1d67172d93a7735d59ab-d
+packagefile errors=D:\go\build-cache\43\43740c498adfa12e02c26199a33a400aec5e269217d67e717c4c6438ffba7bb2-d
+packagefile fmt=D:\go\build-cache\48\48bbb50a58abe85afb70f640eaf05ae92990fd4b3602261e4135d443b4edcde1-d
+packagefile vendor/golang.org/x/net/http/httpguts=D:\AtherKV\.go-tmp\go-build4177651872\b193\_pkg_.a
+packagefile vendor/golang.org/x/net/http2/hpack=D:\AtherKV\.go-tmp\go-build4177651872\b210\_pkg_.a
+packagefile net/http/httptrace=D:\AtherKV\.go-tmp\go-build4177651872\b206\_pkg_.a
+packagefile net/textproto=D:\AtherKV\.go-tmp\go-build4177651872\b201\_pkg_.a
+packagefile net/url=D:\AtherKV\.go-tmp\go-build4177651872\b192\_pkg_.a
+packagefile sort=D:\go\build-cache\00\00c78f810d7762c56d39af6281bf3758b39fcef4939a7835fdd506f832b62752-d
+packagefile strconv=D:\go\build-cache\75\75403f6f4da26d8534778b2a06d4ff7e0b298ee259842dab31c714383255f395-d
+packagefile strings=D:\go\build-cache\21\21d9ccba71a7681174e6312ea4cedb69b138b60776de829dbb6888142058e701-d
+packagefile sync=D:\go\build-cache\e0\e0872717895d8faed1a1ed2a7b776bef549976c28dc1b7b163c5000f4cd8a5e6-d

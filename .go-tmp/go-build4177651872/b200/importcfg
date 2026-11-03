@@ -1,0 +1,8 @@
+# import config
+importmap golang.org/x/text/transform=vendor/golang.org/x/text/transform
+packagefile encoding/binary=D:\go\build-cache\c4\c49bd0875c01bc624a69bcd1910c0d2487c7a01d24318c4a30c6c1329a8964b2-d
+packagefile fmt=D:\go\build-cache\48\48bbb50a58abe85afb70f640eaf05ae92990fd4b3602261e4135d443b4edcde1-d
+packagefile vendor/golang.org/x/text/transform=D:\AtherKV\.go-tmp\go-build4177651872\b196\_pkg_.a
+packagefile io=D:\go\build-cache\d4\d40934532f0e99d154c844dcc6374affb8ec5cee1b54d814e51183a0e221f845-d
+packagefile sync=D:\go\build-cache\e0\e0872717895d8faed1a1ed2a7b776bef549976c28dc1b7b163c5000f4cd8a5e6-d
+packagefile unicode/utf8=D:\go\build-cache\d8\d88e8bd13ef9786fd5ac0c9cc550ea26e411e7cbd9d553580d7206fae2d13fd3-d

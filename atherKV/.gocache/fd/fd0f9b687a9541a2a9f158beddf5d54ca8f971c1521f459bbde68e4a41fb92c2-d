@@ -1,0 +1,6 @@
+=== RUN   TestS1_ControlCampaign_3_4_5_NodeClusters
+    zoo_s1_test.go:47: [S1 CAMPAIGN PASS] 150 chaos cluster runs across 3, 4, and 5 node clusters passed with 0 violations.
+    zoo_s1_test.go:48: [TELEMETRY] Simulated 120.4 virtual cluster seconds in 1.35s (89 virtual sec / real sec).
+--- PASS: TestS1_ControlCampaign_3_4_5_NodeClusters (1.35s)
+PASS
+ok  	github.com/cutaret/aetherkv/zoo	2.874s

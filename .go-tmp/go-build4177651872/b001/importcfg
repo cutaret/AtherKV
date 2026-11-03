@@ -1,0 +1,15 @@
+# import config
+packagefile bytes=D:\go\build-cache\55\55ee4f39787292c492e3dc0d5d55e275187030198bdd5ee307720a192f0f9514-d
+packagefile encoding/json=D:\go\build-cache\3c\3cd955387b72e443b65e50b091d29dd07019a77a8ca4a854e344ceb8d5f2e89e-d
+packagefile flag=D:\go\build-cache\4c\4c7e8848d8a9f90efc12639214168d09608fed9b68c074db7ec9e3dac04ff0fc-d
+packagefile fmt=D:\go\build-cache\48\48bbb50a58abe85afb70f640eaf05ae92990fd4b3602261e4135d443b4edcde1-d
+packagefile github.com/cutaret/aetherkv/kv=D:\go\build-cache\d0\d0578a2affafc81e30ee2a8dbe91e9b6511725c34784c666ad993b22b439d462-d
+packagefile github.com/cutaret/aetherkv/lsm=D:\go\build-cache\0c\0ce9d620f2ef2902aca7843e33c96697b1e3f6ad8c7f5a168aaf76a57f96d1f7-d
+packagefile github.com/cutaret/aetherkv/sim=D:\go\build-cache\68\6875aa51ac0754831671c956a057962242fa446b05bc8d6ba82459938e3cf3ef-d
+packagefile github.com/cutaret/aetherkv/statemachine=D:\go\build-cache\c5\c542de26fc3eb2c37a2fb7ab6864961c321dc96c18717c3da5c0c12a6635b65b-d
+packagefile github.com/cutaret/aetherkv/vfs=D:\go\build-cache\ac\ac6267fd79a5a1244485436d5029077d2e48bc8203b7b043f4df3d700cc4564f-d
+packagefile github.com/cutaret/aetherkv/zoo=D:\go\build-cache\3e\3e75527084242eafb2798bae55771ffce1dcca49a133c643127983f020859aa1-d
+packagefile net/http=D:\AtherKV\.go-tmp\go-build4177651872\b124\_pkg_.a
+packagefile os=D:\go\build-cache\b6\b66fd0334c384368eed21d7cb0a485e18ee8095aae83f0788edcd161a34c3df1-d
+packagefile sync=D:\go\build-cache\e0\e0872717895d8faed1a1ed2a7b776bef549976c28dc1b7b163c5000f4cd8a5e6-d
+packagefile runtime=D:\go\build-cache\2f\2fb2d66f2c64a9616e47a72ef36dd5b1c9625ade475598b384099a07c3fbc5df-d
