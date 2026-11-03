@@ -36,7 +36,7 @@ func NewClusterServer() *ClusterServer {
 
 	opts := lsm.DefaultOptions()
 	opts.MemtableFlushThreshold = 4096
-	opts.ValueLogThreshold = 64 // Separate values >= 64B in playground so users can see WiscKey in action
+	opts.ValueLogThreshold = 64
 
 	for _, id := range peers {
 		disks[id] = vfs.NewSimFS()
@@ -61,7 +61,6 @@ func NewClusterServer() *ClusterServer {
 	}
 	cs.advanceTicks(15)
 
-	// Seed 2 starter keys so a new visitor immediately sees live data in the table
 	if leader := cs.findLeader(); leader != nil {
 		cs.seqNum++
 		leader.SubmitWrite(statemachine.Op{
@@ -213,7 +212,7 @@ func (cs *ClusterServer) handleKV(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"ok":    false,
-			"error": "Quorum Lost! At least 2 of the 3 servers must be online to elect a leader and process requests. Click 'Restart' on a crashed server above.",
+			"error": "Quorum Lost! At least 2 of the 3 servers must be online to elect a leader and process requests. Click 'Turn Server Back On' above.",
 		})
 		return
 	}
@@ -280,7 +279,7 @@ func (cs *ClusterServer) handleNodeAction(w http.ResponseWriter, r *http.Request
 
 	var req struct {
 		NodeID string `json:"node_id"`
-		Action string `json:"action"` // "crash", "restart", "flush", "reset"
+		Action string `json:"action"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
@@ -409,17 +408,24 @@ const indexHTML = `<!DOCTYPE html>
 <title>AetherKV — Interactive Distributed Database Explorer</title>
 <style>
   :root {
-    --bg: #0b0f17;
-    --card: #151c28;
-    --card-alt: #1c2536;
-    --border: #2a3548;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --blue: #38bdf8;
-    --green: #22c55e;
-    --red: #ef4444;
-    --purple: #a855f7;
-    --amber: #f59e0b;
+    /* Neutral Warm Stone Canvas */
+    --bg: #121211;
+    --card: #1A1918;
+    --card-alt: #242321;
+    --border: #33312E;
+    --text: #F5F5F0;
+    --muted: #A39E93;
+
+    /* Strict 3-Color Scheme:
+       1. Primary Complement: Petrol Teal
+       2. Secondary Complement: Terracotta Coral
+       3. Highlight Accent: Amber Gold */
+    --comp-teal: #14B8A6;
+    --comp-teal-dim: rgba(20, 184, 166, 0.14);
+    --comp-coral: #F97316;
+    --comp-coral-dim: rgba(249, 115, 22, 0.15);
+    --highlight-gold: #FACC15;
+    --highlight-gold-dim: rgba(250, 204, 21, 0.14);
   }
   * { box-sizing: border-box; }
   body {
@@ -428,41 +434,44 @@ const indexHTML = `<!DOCTYPE html>
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
     padding: 0;
-    line-height: 1.5;
+    line-height: 1.55;
   }
   .container { max-width: 1180px; margin: 0 auto; padding: 28px 24px 60px; }
 
   /* Header */
   .hero {
-    background: linear-gradient(135deg, #131c2e 0%, #0f172a 100%);
+    background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-top: 3px solid var(--comp-teal);
+    border-radius: 12px;
     padding: 24px 28px;
     margin-bottom: 24px;
   }
-  .hero h1 { margin: 0 0 8px; font-size: 26px; color: #fff; display: flex; align-items: center; gap: 12px; }
+  .hero h1 { margin: 0 0 8px; font-size: 25px; color: var(--text); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .badge-pill {
-    font-size: 12px; background: rgba(56, 189, 248, 0.15); color: var(--blue);
-    border: 1px solid rgba(56, 189, 248, 0.3); padding: 3px 10px; border-radius: 999px; font-weight: 600;
+    font-size: 12px; background: var(--highlight-gold-dim); color: var(--highlight-gold);
+    border: 1px solid var(--highlight-gold); padding: 3px 10px; border-radius: 999px; font-weight: 700;
   }
   .hero p { margin: 0; color: var(--muted); font-size: 15px; max-width: 880px; }
 
   /* Navigation Tabs */
-  .tabs { display: flex; gap: 10px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 10px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 14px; flex-wrap: wrap; }
   .tab-btn {
     background: var(--card); color: var(--muted); border: 1px solid var(--border);
-    padding: 10px 18px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600;
+    padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
     transition: all 0.15s ease;
   }
-  .tab-btn:hover { color: #fff; border-color: #475569; }
-  .tab-btn.active { background: var(--blue); color: #090d16; border-color: var(--blue); }
+  .tab-btn:hover { color: var(--text); border-color: var(--comp-teal); }
+  .tab-btn.active {
+    background: var(--highlight-gold); color: #121211; border-color: var(--highlight-gold); font-weight: 700;
+  }
   .tab-section { display: none; }
   .tab-section.active { display: block; }
 
-  /* Guided Missions Bar */
+  /* Guided Missions Bar (Highlight Gold Accent) */
   .missions {
-    background: rgba(168, 85, 247, 0.08);
-    border: 1px solid rgba(168, 85, 247, 0.3);
+    background: var(--highlight-gold-dim);
+    border: 1px solid rgba(250, 204, 21, 0.4);
     border-radius: 12px;
     padding: 16px 20px;
     margin-bottom: 24px;
@@ -472,59 +481,67 @@ const indexHTML = `<!DOCTYPE html>
     flex-wrap: wrap;
     gap: 12px;
   }
-  .missions-title { font-size: 14px; font-weight: 700; color: #d8b4fe; }
-  .missions-sub { font-size: 13px; color: var(--muted); }
+  .missions-title { font-size: 14.5px; font-weight: 700; color: var(--highlight-gold); }
+  .missions-sub { font-size: 13px; color: var(--text); opacity: 0.85; }
   .mission-btns { display: flex; gap: 10px; flex-wrap: wrap; }
   .btn-mission {
-    background: #2e1065; color: #e9d5ff; border: 1px solid #7e22ce;
+    background: var(--card); color: var(--highlight-gold); border: 1px solid var(--highlight-gold);
     padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600;
   }
-  .btn-mission:hover { background: #4c1d95; }
+  .btn-mission:hover { background: var(--highlight-gold); color: #121211; }
 
   /* Section Cards */
   .card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 12px;
     padding: 22px 24px;
     margin-bottom: 24px;
   }
-  .card h2 { margin: 0 0 6px; font-size: 18px; color: #fff; }
+  .card h2 { margin: 0 0 6px; font-size: 18px; color: var(--text); }
   .card-sub { color: var(--muted); font-size: 13.5px; margin-bottom: 18px; }
 
   /* 3-Node Visual Cluster */
   .nodes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
   .node-box {
     background: var(--bg);
-    border: 2px solid var(--border);
-    border-radius: 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
     padding: 18px;
     transition: all 0.2s ease;
   }
-  .node-box.leader { border-color: var(--green); box-shadow: 0 0 20px rgba(34, 197, 94, 0.12); }
-  .node-box.crashed { border-color: var(--red); opacity: 0.65; background: rgba(239, 68, 68, 0.04); }
+  .node-box.leader {
+    border-color: var(--highlight-gold);
+    box-shadow: 0 0 18px rgba(250, 204, 21, 0.14);
+  }
+  .node-box.crashed {
+    border-color: var(--comp-coral);
+    background: var(--comp-coral-dim);
+  }
   .node-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .node-title { font-size: 17px; font-weight: 700; color: #fff; }
+  .node-title { font-size: 17px; font-weight: 700; color: var(--text); }
   .role-badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
-  .role-leader { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
-  .role-follower { background: rgba(56, 189, 248, 0.15); color: var(--blue); }
-  .role-crashed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+  .role-leader { background: var(--highlight-gold); color: #121211; }
+  .role-follower { background: var(--comp-teal-dim); color: var(--comp-teal); border: 1px solid var(--comp-teal); }
+  .role-crashed { background: var(--comp-coral); color: #121211; }
+
   .metric-row {
     display: flex; justify-content: space-between; font-size: 13px;
-    padding: 6px 0; border-bottom: 1px dashed #1e293b; color: var(--muted);
+    padding: 6px 0; border-bottom: 1px dashed var(--border); color: var(--muted);
   }
   .metric-row strong { color: var(--text); }
   .node-actions { margin-top: 14px; display: flex; gap: 8px; }
 
-  /* Story Narrator Box */
+  /* Story Narrator Box (Teal Complement) */
   .narrator {
-    background: #0f172a;
-    border-left: 4px solid var(--blue);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--comp-teal);
     border-radius: 10px;
     padding: 16px 20px;
     margin-bottom: 24px;
   }
-  .narrator-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--blue); font-weight: 700; margin-bottom: 8px; }
+  .narrator-title { font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--comp-teal); font-weight: 700; margin-bottom: 8px; }
   .narrator-steps { margin: 0; padding-left: 20px; color: var(--text); font-size: 14.5px; }
   .narrator-steps li { margin-bottom: 6px; }
 
@@ -534,33 +551,37 @@ const indexHTML = `<!DOCTYPE html>
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
   .field input, .field select {
-    width: 100%; background: var(--bg); color: #fff; border: 1px solid var(--border);
+    width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border);
     padding: 10px 12px; border-radius: 8px; font-size: 14px;
+  }
+  .field input:focus, .field select:focus {
+    outline: none; border-color: var(--comp-teal);
   }
   .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
   button {
     padding: 9px 15px; border-radius: 8px; border: none; font-size: 13.5px;
-    font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+    font-weight: 700; cursor: pointer; transition: all 0.15s ease;
   }
-  button:hover { opacity: 0.9; }
-  .btn-primary { background: var(--green); color: #052e16; }
-  .btn-blue { background: var(--blue); color: #082f49; }
+  button:hover { filter: brightness(1.08); }
+  .btn-primary { background: var(--comp-teal); color: #08221F; }
+  .btn-highlight { background: var(--highlight-gold); color: #121211; }
   .btn-secondary { background: var(--card-alt); color: var(--text); border: 1px solid var(--border); }
-  .btn-danger { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+  .btn-danger { background: var(--comp-coral-dim); color: var(--comp-coral); border: 1px solid var(--comp-coral); }
 
   /* Live Data Table */
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; background: rgba(0,0,0,0.2); }
-  .tag-wisckey { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; padding: 2px 8px; border-radius: 6px; font-size: 12px; }
-  .tag-inline { background: rgba(56, 189, 248, 0.15); color: var(--blue); padding: 2px 8px; border-radius: 6px; font-size: 12px; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; background: var(--bg); }
+  .tag-wisckey { background: var(--comp-teal-dim); color: var(--comp-teal); border: 1px solid var(--comp-teal); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+  .tag-inline { background: var(--comp-coral-dim); color: var(--comp-coral); border: 1px solid var(--comp-coral); padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
 
   /* Architecture Diagram Pipeline */
   .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 16px; }
-  .pipe-step { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-  .pipe-num { font-size: 12px; color: var(--blue); font-weight: 700; margin-bottom: 4px; }
-  .pipe-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+  .pipe-step { background: var(--bg); border: 1px solid var(--border); border-top: 3px solid var(--comp-teal); border-radius: 10px; padding: 16px; }
+  .pipe-num { font-size: 12px; color: var(--highlight-gold); font-weight: 700; margin-bottom: 4px; }
+  .pipe-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
   .pipe-desc { font-size: 13px; color: var(--muted); }
+  code { color: var(--highlight-gold); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -573,8 +594,8 @@ const indexHTML = `<!DOCTYPE html>
       <span class="badge-pill">Raft Consensus + LSM Engine + WiscKey</span>
     </h1>
     <p>
-      Why do cloud databases need 3 servers instead of 1? Because individual computers crash.
-      AetherKV keeps <strong>3 servers in sync</strong> so you can save data, pull the power cord on the leader server,
+      Why do cloud databases run on 3 servers instead of 1? Because individual machines fail.
+      AetherKV keeps <strong>3 servers in lockstep</strong> so you can save data, pull the power cord on the leader server,
       and watch the surviving servers elect a new leader in milliseconds without losing a single byte.
     </p>
   </div>
@@ -583,7 +604,7 @@ const indexHTML = `<!DOCTYPE html>
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('tab-cluster', this)">1. Live 3-Server Cluster (Try It!)</button>
     <button class="tab-btn" onclick="switchTab('tab-storage', this)">2. How the Storage Engine Works (LSM + AI Cache)</button>
-    <button class="tab-btn" onclick="switchTab('tab-bugzoo', this)">3. Time-Travel Bug Zoo (Break & Shrink Bugs)</button>
+    <button class="tab-btn" onclick="switchTab('tab-bugzoo', this)">3. Time-Travel Bug Zoo (Break &amp; Shrink Bugs)</button>
   </div>
 
   <!-- ======================================================================= -->
@@ -595,7 +616,7 @@ const indexHTML = `<!DOCTYPE html>
     <div class="missions">
       <div>
         <div class="missions-title">New here? Try this 3-Step Guided Demo:</div>
-        <div class="missions-sub">Click each button in order and read the blue explanation box below to see fault tolerance in action.</div>
+        <div class="missions-sub">Click each button in order and read the explanation box below to watch automatic failover happen live.</div>
       </div>
       <div class="mission-btns">
         <button class="btn-mission" onclick="runMission(1)">Step 1: Save a Secret Key</button>
@@ -608,7 +629,7 @@ const indexHTML = `<!DOCTYPE html>
     <div class="narrator">
       <div class="narrator-title" id="narratorHeading">Live System Narrator — What Just Happened?</div>
       <ol class="narrator-steps" id="narratorList">
-        <li><strong>Cluster Ready:</strong> 3 virtual servers (<strong>n1</strong>, <strong>n2</strong>, <strong>n3</strong>) are running. One is the <strong>Leader</strong> (green border) and two are <strong>Followers</strong>.</li>
+        <li><strong>Cluster Ready:</strong> 3 virtual servers (<strong>N1</strong>, <strong>N2</strong>, <strong>N3</strong>) are online. One is the <strong>Leader</strong> (gold border) and two are <strong>Followers</strong> (teal badge).</li>
         <li>Click any <strong>Guided Demo</strong> button above—or use the form below—to see step-by-step how your data is replicated and protected against crashes.</li>
       </ol>
     </div>
@@ -617,7 +638,7 @@ const indexHTML = `<!DOCTYPE html>
     <div class="card">
       <h2>Live 3-Server Raft Cluster</h2>
       <div class="card-sub">
-        In Raft consensus, writes go to the <strong>Leader</strong>, which copies them to the <strong>Followers</strong>. As long as <strong>at least 2 out of 3 servers</strong> are online, the database stays 100% available.
+        Writes go to the <strong>Leader</strong> (highlighted in gold), which replicates them to the <strong>Followers</strong>. As long as <strong>at least 2 out of 3 servers</strong> remain healthy, the cluster stays 100% online.
       </div>
       <div id="nodesContainer" class="nodes-grid"></div>
     </div>
@@ -626,7 +647,7 @@ const indexHTML = `<!DOCTYPE html>
     <div class="controls-grid">
       <div class="card" style="margin-bottom:0">
         <h2>Save or Read Data</h2>
-        <div class="card-sub">Every write is replicated across the cluster. Values 64 bytes or larger are automatically routed to the WiscKey Value Log.</div>
+        <div class="card-sub">Every write is replicated across a majority of servers. Values 64 bytes or larger are automatically separated into the WiscKey Value Log.</div>
 
         <div class="field">
           <label>Key Name</label>
@@ -637,13 +658,13 @@ const indexHTML = `<!DOCTYPE html>
           <input id="kvVal" value="status=PAID,amount=2500" placeholder="Enter any text or large payload">
         </div>
         <div class="field">
-          <label>Expected Current Value (Only used for CAS / Safe Update)</label>
-          <input id="kvExp" placeholder="Leave blank unless clicking CAS">
+          <label>Expected Current Value (Only used for CAS / Safe Swap)</label>
+          <input id="kvExp" placeholder="Leave blank unless clicking Safe Swap (CAS)">
         </div>
 
         <div class="btn-row">
           <button class="btn-primary" onclick="sendKV('PUT')">Save Key (PUT)</button>
-          <button class="btn-blue" onclick="sendKV('GET')">Verified Read (GET)</button>
+          <button class="btn-highlight" onclick="sendKV('GET')">Verified Read (GET)</button>
           <button class="btn-secondary" onclick="sendKV('CAS')">Safe Swap (CAS)</button>
           <button class="btn-danger" onclick="sendKV('DELETE')">Delete Key</button>
         </div>
@@ -651,11 +672,11 @@ const indexHTML = `<!DOCTYPE html>
 
       <div class="card" style="margin-bottom:0">
         <h2>Live Database Contents</h2>
-        <div class="card-sub">Automatically shows all live keys stored inside the cluster and whether they live inline in the LSM tree or in the WiscKey Value Log.</div>
+        <div class="card-sub">Real-time view of all live keys stored inside the cluster and their physical storage tier.</div>
         <div style="overflow-x:auto">
           <table>
             <thead>
-              <tr><th>Key</th><th>Current Value</th><th>Storage Path</th></tr>
+              <tr><th>Key</th><th>Current Value</th><th>Storage Tier</th></tr>
             </thead>
             <tbody id="dbTableBody">
               <tr><td colspan="3">Loading keys...</td></tr>
@@ -673,36 +694,36 @@ const indexHTML = `<!DOCTYPE html>
     <div class="card">
       <h2>How AetherKV Stores Data Without Slowing Down</h2>
       <div class="card-sub">
-        Standard LSM-tree databases rewrite keys and values repeatedly during background sorting ("compaction"). For large AI workloads like <strong>Llama-3-8B KV-cache blocks (128 KiB to 2 MiB)</strong>, copying megabytes repeatedly destroys SSD speed. AetherKV solves this using <strong>WiscKey Value Separation</strong>:
+        Standard LSM-tree databases rewrite keys and values repeatedly during background sorting ("compaction"). For large AI workloads like <strong>Llama-3-8B KV-cache blocks (128 KiB to 2 MiB)</strong>, copying megabytes repeatedly wears out SSDs. AetherKV solves this with <strong>WiscKey Value Separation</strong>:
       </div>
 
       <div class="pipeline">
         <div class="pipe-step">
           <div class="pipe-num">STEP 1 — CONSENSUS</div>
           <div class="pipe-title">Raft Quorum Log</div>
-          <div class="pipe-desc">The Leader writes the command to its CRC32C-checksummed WAL and replicates it to a majority of servers so power loss cannot lose it.</div>
+          <div class="pipe-desc">The Leader appends the mutation to its CRC32C-checksummed WAL and replicates it to a majority of servers.</div>
         </div>
         <div class="pipe-step">
           <div class="pipe-num">STEP 2 — WISCKEY SPLIT</div>
           <div class="pipe-title">Value Log Separation</div>
-          <div class="pipe-desc">Large values go straight into an append-only <code>vlog</code> file. Only a tiny <strong>24-byte pointer</strong> (file, offset, size, checksum) enters the LSM tree.</div>
+          <div class="pipe-desc">Large values go straight into an append-only <code>vlog</code> segment. Only a tiny <strong>24-byte pointer</strong> enters the LSM tree.</div>
         </div>
         <div class="pipe-step">
           <div class="pipe-num">STEP 3 — IN-MEMORY SORT</div>
           <div class="pipe-title">Skiplist Memtable</div>
-          <div class="pipe-desc">Keys and 24B pointers are sorted in RAM by <code>(Key ASC, Version DESC)</code> for instant lookups and snapshot isolation.</div>
+          <div class="pipe-desc">Keys and 24B pointers are sorted in RAM by <code>(Key ASC, Seq DESC)</code> for fast point lookups and range scans.</div>
         </div>
         <div class="pipe-step">
           <div class="pipe-num">STEP 4 — ON-DISK FILES</div>
           <div class="pipe-title">SSTables &amp; Bloom Filters</div>
-          <div class="pipe-desc">When RAM fills up, sorted blocks flush to disk with a <strong>Bloom Filter</strong> (0.78% false-positive rate) that skips unnecessary disk reads.</div>
+          <div class="pipe-desc">Sorted 4 KiB blocks flush to disk with a <strong>Bloom Filter</strong> (0.78% false-positive rate) that skips unnecessary disk reads.</div>
         </div>
       </div>
     </div>
 
     <div class="card">
       <h2>Measured Llama-3-8B KV-Cache Benchmark Results (5-Run Median)</h2>
-      <div class="card-sub">By keeping 2 MiB AI tensor blocks in the Value Log and only compacting 24-byte pointers in the LSM tree, AetherKV eliminates unnecessary disk copying:</div>
+      <div class="card-sub">Keeping 2 MiB AI tensor blocks in the Value Log and only compacting 24-byte pointers in the LSM tree eliminates redundant disk copying:</div>
       <table>
         <thead>
           <tr><th>Workload</th><th>Storage Mode</th><th>Write Amplification (Lower is Better)</th><th>Throughput (Higher is Better)</th><th>p99 Tail Latency</th></tr>
@@ -710,7 +731,7 @@ const indexHTML = `<!DOCTYPE html>
         <tbody>
           <tr>
             <td><strong>128 KiB</strong> (1-Token KV Block)</td>
-            <td>Standard Inline LSM</td>
+            <td><span class="tag-inline">Standard Inline LSM</span></td>
             <td>4.50x (copies data 4.5 times)</td>
             <td>81.3 MiB/s</td>
             <td>8,684 us</td>
@@ -724,7 +745,7 @@ const indexHTML = `<!DOCTYPE html>
           </tr>
           <tr>
             <td><strong>2 MiB</strong> (16-Token KV Block)</td>
-            <td>Standard Inline LSM</td>
+            <td><span class="tag-inline">Standard Inline LSM</span></td>
             <td>3.67x (copies data 3.7 times)</td>
             <td>134.8 MiB/s</td>
             <td>35,958 us</td>
@@ -748,8 +769,8 @@ const indexHTML = `<!DOCTYPE html>
     <div class="card">
       <h2>Deterministic Bug Zoo &amp; Automatic Fault Shrinker</h2>
       <div class="card-sub">
-        In the real world, distributed database bugs only happen once a month when a network cable glitches at the exact millisecond a server reboots.
-        AetherKV runs inside a <strong>Deterministic Simulation Kernel</strong> (~8,100 virtual seconds per real second) that injects 20 random crashes and network splits, catches the bug, and automatically removes irrelevant faults to find the <strong>2 or 3 exact steps</strong> that broke the system.
+        Real distributed systems bugs hide behind rare combinations of network partitions and sudden power outages.
+        AetherKV's <strong>Deterministic Simulator</strong> (~8,100 virtual seconds per real second) injects 20 random faults, catches the invariant violation, and automatically shrinks the failure down to the <strong>2 or 3 minimal steps</strong> required to reproduce it.
       </div>
 
       <div class="controls-grid" style="align-items: start;">
@@ -769,14 +790,14 @@ const indexHTML = `<!DOCTYPE html>
           </div>
           <div class="btn-row">
             <button class="btn-primary" onclick="runSim()">Run Chaos Simulation &amp; Shrink</button>
-            <button id="openTraceBtn" class="btn-blue" style="display:none" onclick="openTraceTab()">Open Full Visual Timeline in New Tab</button>
+            <button id="openTraceBtn" class="btn-highlight" style="display:none" onclick="openTraceTab()">Open Full Visual Timeline in New Tab</button>
           </div>
         </div>
 
         <div class="narrator" style="margin-bottom:0">
           <div class="narrator-title">Plain-English Scenario Guide</div>
           <div id="bugPlainExplanation" style="font-size:14px; color:var(--text);">
-            <strong>What is Bug #13?</strong> In a 4-server cluster, a true majority requires <strong>3 servers</strong>. This bug uses faulty math <code>(4+1)/2 = 2</code>, allowing two isolated pairs of 2 servers to both think they are in charge ("Split-Brain") and overwrite committed data!
+            <strong>What is Bug #13?</strong> In a 4-server cluster, a true majority requires <strong>3 servers</strong>. This bug uses faulty integer division <code>(4+1)/2 = 2</code>, allowing two isolated pairs of 2 servers to both elect a leader ("Split-Brain") and overwrite committed data!
           </div>
         </div>
       </div>
@@ -879,25 +900,25 @@ async function sendKV(op) {
   if (!data.ok) {
     setNarrator('Operation Blocked — Cluster Quorum Lost!', [
       '<strong>Why did this fail?</strong> ' + (data.error || 'No leader available.'),
-      '<strong>How Raft protects you:</strong> Refusing writes when a majority of servers are dead prevents two isolated halves of a network from accepting conflicting data.'
+      '<strong>How Raft protects you:</strong> Refusing writes when a majority of servers are offline prevents split-brain data corruption.'
     ]);
   } else if (op === 'PUT') {
     const storageNote = data.wisckey
-      ? 'Because the value is >= 64 bytes, AetherKV stored the blob in the <strong>WiscKey Value Log</strong> and wrote only a 24-byte pointer into the LSM tree.'
+      ? 'Because the payload is >= 64 bytes, AetherKV appended the blob to the <strong>WiscKey Value Log</strong> and stored only a 24-byte pointer inside the LSM tree.'
       : 'The key and value were written into the <strong>Skiplist Memtable</strong> and durable Write-Ahead Log.';
     setNarrator('Saved Key "' + key + '" Across the Cluster!', [
       '<strong>1. Sent to Leader:</strong> Your write arrived at Leader <strong>Server ' + data.leader.toUpperCase() + '</strong> (Election Round #' + data.term + ').',
-      '<strong>2. Replicated to Followers:</strong> Server ' + data.leader.toUpperCase() + ' copied the entry to the follower servers and waited for a majority to save it to disk (<code>fsync</code>).',
+      '<strong>2. Replicated to Followers:</strong> Server ' + data.leader.toUpperCase() + ' replicated the entry and waited for a majority to confirm disk save (<code>fsync</code>).',
       '<strong>3. Storage Engine:</strong> ' + storageNote
     ]);
   } else if (op === 'GET') {
     setNarrator('Verified Read (ReadIndex) for "' + key + '"', [
-      '<strong>1. Quorum Heartbeat Check:</strong> Leader <strong>Server ' + data.leader.toUpperCase() + '</strong> sent a fast heartbeat to the followers to verify it hasn\'t been deposed by a newer leader.',
+      '<strong>1. Quorum Heartbeat Check:</strong> Leader <strong>Server ' + data.leader.toUpperCase() + '</strong> confirmed with a majority of servers that it is still the active leader.',
       '<strong>2. Result:</strong> ' + (data.found ? 'Found value: <code>' + escapeHtml(data.value) + '</code>' : 'Key does not exist in the database.')
     ]);
   } else if (op === 'DELETE') {
     setNarrator('Deleted Key "' + key + '" (Tombstone Written)', [
-      '<strong>How LSM Deletes Work:</strong> Instead of searching disk files to erase "' + key + '", Leader <strong>Server ' + data.leader.toUpperCase() + '</strong> replicated a <strong>Tombstone marker</strong> that hides older versions until background compaction cleans them up.'
+      '<strong>How LSM Deletes Work:</strong> Leader <strong>Server ' + data.leader.toUpperCase() + '</strong> wrote a replicated <strong>Tombstone marker</strong> that masks older versions until background compaction removes them.'
     ]);
   } else if (op === 'CAS') {
     setNarrator('Compare-And-Swap (Safe Atomic Update) on "' + key + '"', [
@@ -918,23 +939,23 @@ async function nodeAct(node_id, action) {
     if (data.was_leader && data.new_leader !== 'None (No Quorum)') {
       setNarrator('Leader Server ' + node_id.toUpperCase() + ' Crashed — Automatic Failover Complete!', [
         '<strong>1. Power Loss Simulated:</strong> You pulled the plug on Leader <strong>Server ' + node_id.toUpperCase() + '</strong>. Its unsynced RAM was wiped.',
-        '<strong>2. Election Triggered:</strong> The surviving followers noticed heartbeats stopped, incremented the Election Round to <strong>Round #' + data.new_term + '</strong>, and elected <strong>Server ' + data.new_leader.toUpperCase() + '</strong> as the new Leader!',
-        '<strong>3. Zero Data Loss:</strong> Look at the Live Database Contents table—all your saved keys are still 100% intact.'
+        '<strong>2. Election Triggered:</strong> The surviving followers detected missing heartbeats, advanced to <strong>Round #' + data.new_term + '</strong>, and elected <strong>Server ' + data.new_leader.toUpperCase() + '</strong> as the new Leader (now highlighted in gold)!',
+        '<strong>3. Zero Data Loss:</strong> All committed keys in the Live Database Contents table remain 100% intact.'
       ]);
     } else if (data.new_leader === 'None (No Quorum)') {
       setNarrator('Cluster Lost Majority Quorum (2 of 3 Servers Offline)!', [
         '<strong>What happened:</strong> With <strong>Server ' + node_id.toUpperCase() + '</strong> crashed, fewer than 2 servers remain online.',
-        '<strong>Safety First:</strong> Raft pauses writes until you click <strong>"Turn Server Back On"</strong> so at least 2 servers are healthy again.'
+        '<strong>Safety First:</strong> Click <strong>"Turn Server Back On"</strong> on any crashed server to restore quorum.'
       ]);
     } else {
       setNarrator('Follower Server ' + node_id.toUpperCase() + ' Crashed!', [
-        '<strong>Cluster Still Online:</strong> Follower ' + node_id.toUpperCase() + ' is offline, but <strong>Server ' + data.new_leader.toUpperCase() + '</strong> still has a 2-of-3 majority and continues serving reads and writes!'
+        '<strong>Cluster Still Online:</strong> Follower ' + node_id.toUpperCase() + ' is offline, but <strong>Server ' + data.new_leader.toUpperCase() + '</strong> still holds a 2-of-3 majority and continues serving traffic.'
       ]);
     }
   } else if (action === 'restart') {
     setNarrator('Server ' + node_id.toUpperCase() + ' Rebooted & Recovered!', [
       '<strong>1. Crash Recovery:</strong> Server ' + node_id.toUpperCase() + ' verified its CRC32C checksummed Write-Ahead Log, truncated any torn 512-byte sectors, and rejoined the cluster.',
-      '<strong>2. Caught Up:</strong> Leader <strong>' + data.new_leader.toUpperCase() + '</strong> automatically replayed any writes that ' + node_id.toUpperCase() + ' missed while offline.'
+      '<strong>2. Caught Up:</strong> Leader <strong>' + data.new_leader.toUpperCase() + '</strong> automatically replayed any writes missed while offline.'
     ]);
   } else if (action === 'flush') {
     setNarrator('Flushed RAM Memtable to On-Disk SSTable on ' + node_id.toUpperCase(), [
@@ -946,7 +967,6 @@ async function nodeAct(node_id, action) {
 
 async function runMission(step) {
   if (step === 1) {
-    // Ensure all nodes are healthy first
     await fetch('/api/node', {method: 'POST', body: JSON.stringify({action: 'heal_all'})});
     document.getElementById('kvKey').value = 'mission:secret';
     document.getElementById('kvVal').value = 'launch-code-7788';
@@ -972,7 +992,7 @@ function updateBugExplanation() {
   const bug = document.getElementById('bugSelect').value;
   const box = document.getElementById('bugPlainExplanation');
   if (bug === '13') {
-    box.innerHTML = '<strong>What is Bug #13?</strong> In a 4-server cluster, a true majority requires <strong>3 servers</strong>. This bug uses faulty math <code>(4+1)/2 = 2</code>, allowing two isolated pairs of 2 servers to both think they are in charge ("Split-Brain") and overwrite committed data!';
+    box.innerHTML = '<strong>What is Bug #13?</strong> In a 4-server cluster, a true majority requires <strong>3 servers</strong>. This bug uses faulty integer division <code>(4+1)/2 = 2</code>, allowing two isolated pairs of 2 servers to both elect a leader ("Split-Brain") and overwrite committed data!';
   } else if (bug === '2') {
     box.innerHTML = '<strong>What is Bug #2?</strong> When a server votes for a candidate, it must save that vote to disk before replying. Here, the server replies first, crashes, reboots with amnesia, and votes for a <em>different</em> candidate in the same election round!';
   } else if (bug === '3') {
@@ -1001,19 +1021,19 @@ async function runSim() {
 
   if (!data.failed) {
     box.innerHTML =
-      '<div style="background:rgba(34,197,94,0.12); border:1px solid var(--green); padding:16px; border-radius:10px; color:#fff;">' +
-        '<strong>SIMULATION PASSED (0 Violations):</strong> Across 20 injected network partitions, packet drops, and server crashes on Seed #' + seed + ', the cluster preserved 100% data safety and linearizability.' +
+      '<div style="background:var(--comp-teal-dim); border:1px solid var(--comp-teal); padding:16px; border-radius:10px; color:var(--text);">' +
+        '<strong style="color:var(--comp-teal)">SIMULATION PASSED (0 Violations):</strong> Across 20 injected network partitions, packet drops, and server crashes on Seed #' + seed + ', the cluster preserved 100% data safety and linearizability.' +
       '</div>';
   } else {
     if (latestTraceHTML) {
       document.getElementById('openTraceBtn').style.display = 'inline-block';
     }
     box.innerHTML =
-      '<div style="background:rgba(239,68,68,0.12); border:1px solid var(--red); padding:16px; border-radius:10px; color:#fff;">' +
-        '<div style="color:#fca5a5; font-weight:700; font-size:15px; margin-bottom:6px;">BUG CAUGHT DETERMINISTICALLY ON SEED #' + seed + '!</div>' +
+      '<div style="background:var(--comp-coral-dim); border:1px solid var(--comp-coral); padding:16px; border-radius:10px; color:var(--text);">' +
+        '<div style="color:var(--comp-coral); font-weight:700; font-size:15px; margin-bottom:6px;">BUG CAUGHT DETERMINISTICALLY ON SEED #' + seed + '!</div>' +
         '<div style="margin-bottom:6px;"><strong>Invariant Detector Triggered:</strong> <code>' + escapeHtml(data.detector) + '</code></div>' +
         '<div style="margin-bottom:6px;"><strong>What Broke:</strong> ' + escapeHtml(data.details) + '</div>' +
-        '<div><strong>Automatic Fault Shrinking:</strong> The simulator stripped away unnecessary chaos and reduced the crash schedule from <strong>' + data.initial_faults + ' random faults down to ' + data.shrunk_faults + ' minimal steps</strong>. Click <em>"Open Full Visual Timeline in New Tab"</em> above to inspect the exact millisecond-by-millisecond trace!</div>' +
+        '<div><strong>Automatic Fault Shrinking:</strong> The simulator stripped away unnecessary chaos and reduced the crash schedule from <strong>' + data.initial_faults + ' random faults down to ' + data.shrunk_faults + ' minimal steps</strong>. Click <em>"Open Full Visual Timeline in New Tab"</em> above to inspect the trace!</div>' +
       '</div>';
   }
 }
