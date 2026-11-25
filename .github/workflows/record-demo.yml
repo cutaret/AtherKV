@@ -1,6 +1,11 @@
 name: Record Demo GIF (VHS)
 on:
   workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/record-demo.yml"
+      - "atherKV/docs/assets/demo.tape"
 permissions:
   contents: write
 jobs:
@@ -14,16 +19,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: atherKV/go.mod
-      - name: Install VHS, ttyd, and ffmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg ttyd
-          go install github.com/charmbracelet/vhs@latest
-          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Install VHS toolchain
+        uses: charmbracelet/vhs-action@v2
+        with:
+          path: ""
       - name: Record terminal demo GIF
         working-directory: atherKV
-        env:
-          VHS_NO_SANDBOX: "true"
         run: vhs docs/assets/demo.tape
       - name: Commit and push demo.gif
         run: |
