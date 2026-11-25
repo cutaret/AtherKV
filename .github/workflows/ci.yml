@@ -1,0 +1,29 @@
+name: CI Verification
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+jobs:
+  verify:
+    name: Determinism, Race Detector & 17-Bug Zoo
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atherKV
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: atherKV/go.mod
+          cache-dependency-path: atherKV/go.mod
+      - name: Run static determinism linter (detlint)
+        run: go run ./cmd/detlint statemachine raft lsm kv
+      - name: Run race detector on core packages
+        run: go test -race -p 1 ./sim ./vfs ./raft/... ./lsm/... ./adapters/... -count=1
+      - name: Run full verification suite & 17-entry Bug Zoo
+        run: go test -p 1 -v ./... -count=1
+      - name: Verify all binaries build
+        run: go build ./...
