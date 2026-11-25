@@ -1,0 +1,92 @@
+[
+  {
+    "workload": "YCSB-A (50% Put / 50% Get, 256B)",
+    "engine": "AetherKV (OSFS, fsync=ON)",
+    "runs": 5,
+    "median_ops_per_sec": 5593.819143100745,
+    "median_mib_per_sec": 1.3656785017335804,
+    "p50_latency_us": 145.841,
+    "p99_latency_us": 386.193
+  },
+  {
+    "workload": "YCSB-A (50% Put / 50% Get, 256B)",
+    "engine": "CockroachDB Pebble v1.1.5 (Sync)",
+    "runs": 5,
+    "median_ops_per_sec": 9065.896694016512,
+    "median_mib_per_sec": 2.213353685062625,
+    "p50_latency_us": 147.262,
+    "p99_latency_us": 403.369
+  },
+  {
+    "workload": "YCSB-B (5% Put / 95% Get, 256B)",
+    "engine": "AetherKV (OSFS, fsync=ON)",
+    "runs": 5,
+    "median_ops_per_sec": 73113.96584590756,
+    "median_mib_per_sec": 17.850089317848525,
+    "p50_latency_us": 0.221,
+    "p99_latency_us": 182.496
+  },
+  {
+    "workload": "YCSB-B (5% Put / 95% Get, 256B)",
+    "engine": "CockroachDB Pebble v1.1.5 (Sync)",
+    "runs": 5,
+    "median_ops_per_sec": 76158.25762091886,
+    "median_mib_per_sec": 18.593324614482142,
+    "p50_latency_us": 0.331,
+    "p99_latency_us": 192.762
+  },
+  {
+    "workload": "128 KiB Llama-3 1-Token KV Block",
+    "engine": "AetherKV Inline LSM (OSFS)",
+    "runs": 5,
+    "median_ops_per_sec": 254.15961598769462,
+    "median_mib_per_sec": 31.769951998461828,
+    "p50_latency_us": 2028.984,
+    "p99_latency_us": 41468.406
+  },
+  {
+    "workload": "128 KiB Llama-3 1-Token KV Block",
+    "engine": "AetherKV WiscKey VLog (OSFS)",
+    "runs": 5,
+    "median_ops_per_sec": 1234.023382069373,
+    "median_mib_per_sec": 154.25292275867162,
+    "p50_latency_us": 497.521,
+    "p99_latency_us": 4812.176
+  },
+  {
+    "workload": "128 KiB Llama-3 1-Token KV Block",
+    "engine": "CockroachDB Pebble v1.1.5 (Sync)",
+    "runs": 5,
+    "median_ops_per_sec": 1315.928353184204,
+    "median_mib_per_sec": 164.4910441480255,
+    "p50_latency_us": 372.262,
+    "p99_latency_us": 2827.82
+  },
+  {
+    "workload": "2 MiB Llama-3 16-Token KV Block",
+    "engine": "AetherKV Inline LSM (OSFS)",
+    "runs": 5,
+    "median_ops_per_sec": 20.24795319515536,
+    "median_mib_per_sec": 40.49590639031072,
+    "p50_latency_us": 22195.651,
+    "p99_latency_us": 90003.572
+  },
+  {
+    "workload": "2 MiB Llama-3 16-Token KV Block",
+    "engine": "AetherKV WiscKey VLog (OSFS)",
+    "runs": 5,
+    "median_ops_per_sec": 112.10566063146466,
+    "median_mib_per_sec": 224.21132126292932,
+    "p50_latency_us": 8782.847,
+    "p99_latency_us": 29952.889
+  },
+  {
+    "workload": "2 MiB Llama-3 16-Token KV Block",
+    "engine": "CockroachDB Pebble v1.1.5 (Sync)",
+    "runs": 5,
+    "median_ops_per_sec": 54.31838148967165,
+    "median_mib_per_sec": 108.6367629793433,
+    "p50_latency_us": 16475.448,
+    "p99_latency_us": 42467.611
+  }
+]

@@ -1,0 +1,24 @@
+=== Kernel ===
+Linux runnervm0hi8g 7.0.0-1020-azure #21-Ubuntu SMP PREEMPT Tue Oct 27 22:34:38 UTC 2026 x86_64 GNU/Linux
+
+=== CPU ===
+Architecture:                            x86_64
+CPU(s):                                  4
+On-line CPU(s) list:                     0-3
+Model name:                              AMD EPYC 9V74 80-Core Processor
+Thread(s) per core:                      2
+Core(s) per socket:                      2
+NUMA node0 CPU(s):                       0-3
+
+=== Memory ===
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi       1.2Gi        13Gi        44Mi       1.7Gi        14Gi
+Swap:          3.0Gi          0B       3.0Gi
+
+=== Filesystem (Working Dir) ===
+Filesystem     Type  Size  Used Avail Use% Mounted on
+/dev/root      ext4  145G   58G   87G  41% /
+
+=== Block Devices ===
+NAME    MODEL                      ROTA  SIZE
+nvme0n1 MSFT NVMe Accelerator v1.0    0  150G
