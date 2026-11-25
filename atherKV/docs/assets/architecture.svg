@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 620" width="1040" height="620" role="img" aria-label="AetherKV System Architecture">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 620" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="AetherKV System Architecture">
   <defs>
     
     <pattern id="dot-grid" width="20" height="20" patternUnits="userSpaceOnUse">
@@ -82,7 +82,6 @@
         100% { transform: scale(2.2); opacity: 0; }
       }
 
-      /* Interactive Hover States (active when viewed directly or hosted) */
       .interactive {
         cursor: pointer;
         transition: transform 0.2s ease, opacity 0.2s ease;
@@ -131,7 +130,6 @@
   </g>
 
   
-  
   <path d="M 250 124 C 250 144, 420 132, 465 152" fill="none" stroke="#94A3B8" stroke-width="1.4" />
   <path d="M 520 124 L 520 152" fill="none" stroke="#94A3B8" stroke-width="1.4" />
   <path d="M 790 124 C 790 144, 620 132, 575 152" fill="none" stroke="#94A3B8" stroke-width="1.4" />
@@ -171,8 +169,9 @@
   <use href="#path-kv-raft" stroke="#0088FF" stroke-width="1.6" class="flow-line" marker-end="url(#arr-blue)" />
   <use href="#path-kv-lsm" stroke="#5A647E" stroke-width="1.6" class="flow-line" marker-end="url(#arr-slate)" />
 
-  <text x="284" y="216" class="mono" font-size="10.5" font-weight="600" fill="#0066CC">Propose / Ready</text>
-  <text x="668" y="216" class="mono" font-size="10.5" font-weight="600" fill="#5A647E">StateMachine Seam</text>
+  
+  <text x="292" y="210" text-anchor="end" class="mono" font-size="10.5" font-weight="600" fill="#0066CC">Propose / Ready</text>
+  <text x="742" y="210" text-anchor="start" class="mono" font-size="10.5" font-weight="600" fill="#5A647E">StateMachine Seam</text>
 
   
   <circle r="3.5" fill="#0095FF">
@@ -193,7 +192,6 @@
     <title>raft/node.go &amp; raft/wal: Pure zero-I/O state machine with segmented CRC32C WAL and FlushedIndex coupling</title>
     <rect x="44" y="242" width="452" height="136" rx="20" fill="#F0F7FF" stroke="#D4E6FF" stroke-width="1.2" />
 
-    
     <g transform="translate(64, 256)">
       <line x1="12" y1="4" x2="4" y2="18" stroke="#0088FF" stroke-width="1.5" />
       <line x1="12" y1="4" x2="20" y2="18" stroke="#0088FF" stroke-width="1.5" />
@@ -205,7 +203,6 @@
     <text x="96" y="271" class="mono" font-size="13" font-weight="700" fill="#0048FF">raft</text>
     <text x="136" y="271" class="sans" font-size="13.5" font-weight="700" fill="#2B3040">Pure Zero-I/O Consensus</text>
 
-    
     <g filter="url(#pill-shadow)">
       <rect x="64" y="288" width="124" height="32" rx="16" fill="#FFFFFF" stroke="#BFDBFE" stroke-width="1" />
       <text x="126" y="308" text-anchor="middle" class="sans" font-size="11.5" font-weight="600" fill="#2B3040">Election &amp; Fig. 8</text>
@@ -223,7 +220,6 @@
       <text x="418" y="308" text-anchor="middle" class="mono" font-size="11" font-weight="600" fill="#2B3040">InstallSnapshot</text>
     </g>
 
-    
     <circle cx="72" cy="349" r="4" fill="#0057FF" />
     <text x="84" y="353" class="sans" font-size="12" font-weight="600" fill="#3E4459">Option B Fence:</text>
     <text x="180" y="353" class="mono" font-size="11.5" fill="#0048FF">FlushedIndex</text>
@@ -237,7 +233,6 @@
     <title>lsm/db.go &amp; lsm/vlog.go: 32 KiB fragmented WAL, skiplist memtable, leveled SSTables with 0.78% FP Bloom filters, and WiscKey value separation</title>
     <rect x="524" y="242" width="472" height="136" rx="20" fill="#F2F4F8" stroke="#DCE2EC" stroke-width="1.2" />
 
-    
     <g transform="translate(544, 256)">
       <polygon points="11,2 22,7 11,12 0,7" fill="#3E4459" />
       <polyline points="0,12 11,17 22,12" fill="none" stroke="#5A647E" stroke-width="1.6" />
@@ -246,7 +241,6 @@
     <text x="576" y="271" class="mono" font-size="13" font-weight="700" fill="#3E4459">lsm</text>
     <text x="610" y="271" class="sans" font-size="13.5" font-weight="700" fill="#2B3040">Leveled Storage + WiscKey</text>
 
-    
     <g filter="url(#pill-shadow)">
       <rect x="544" y="288" width="84" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1" />
       <text x="586" y="307" text-anchor="middle" class="mono" font-size="11" font-weight="600" fill="#2B3040">32K WAL</text>
@@ -273,27 +267,23 @@
     
     <path d="M 586 318 L 586 333" fill="none" stroke="#F25C05" stroke-width="1.5" marker-end="url(#arr-orange)" />
     <rect x="544" y="335" width="432" height="30" rx="15" fill="#FFF7ED" stroke="url(#grad-orange)" stroke-width="1.2" />
-    <text x="562" y="354" class="sans" font-size="11.5" font-weight="700" fill="#F25C05">WiscKey VLog</text>
-    <text x="652" y="354" class="sans" font-size="11.5" fill="#5A647E">Values ≥4 KiB → 24B Pointer · Llama-3 KV-Cache</text>
+    <text x="560" y="354" class="sans" font-size="11.5" font-weight="700" fill="#F25C05">WiscKey VLog</text>
+    <text x="648" y="354" class="sans" font-size="11.2" fill="#5A647E">Values ≥4 KiB → 24B Ptr · Llama-3 KV</text>
     <rect x="898" y="340" width="72" height="20" rx="10" fill="url(#grad-orange)" />
     <text x="934" y="354" text-anchor="middle" class="mono" font-size="10.5" font-weight="700" fill="#FFFFFF">1.00x WA</text>
   </g>
 
-  
   
   <path d="M 170 378 L 170 416" fill="none" stroke="#94A3B8" stroke-width="1.3" />
   <path d="M 345 378 L 345 416" fill="none" stroke="#94A3B8" stroke-width="1.3" />
   <path d="M 695 378 L 695 416" fill="none" stroke="#94A3B8" stroke-width="1.3" />
   <path d="M 870 378 L 870 416" fill="none" stroke="#94A3B8" stroke-width="1.3" />
 
-  
   <text x="44" y="407" class="mono" font-size="10" font-weight="700" letter-spacing="1.6" fill="#5A647E">HOST-INTERFACE DETERMINISM SEAM</text>
 
-  
   <line x1="44" y1="432" x2="996" y2="432" stroke="url(#grad-slate)" stroke-width="3" stroke-linecap="round" />
   <line x1="44" y1="432" x2="996" y2="432" stroke="#00C2FF" stroke-width="1.5" stroke-dasharray="10 38" class="flow-line" />
 
-  
   <g class="pin" filter="url(#pill-shadow)">
     <title>sim.Clock: Monotonic virtual clock with per-node static offset and PPM drift</title>
     <rect x="103" y="416" width="134" height="32" rx="16" fill="#FFFFFF" stroke="#3E4459" stroke-width="1.3" />
@@ -330,7 +320,6 @@
   </g>
 
   
-  
   <path d="M 170 448 C 170 472, 170 470, 170 490" fill="none" stroke="#0088FF" stroke-width="1.4" opacity="0.5" />
   <use href="#path-seam-prod" stroke="#007BFF" stroke-width="1.6" class="flow-line" marker-end="url(#arr-blue)" />
   <circle r="3.5" fill="#007BFF">
@@ -357,7 +346,6 @@
     <rect x="380" y="503" width="98" height="21" rx="10.5" fill="#EFF6FF" />
     <text x="429" y="517" text-anchor="middle" class="mono" font-size="10.5" font-weight="700" fill="#0057FF">Real OS I/O</text>
 
-    
     <text x="64" y="547" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">vfs.OSFS</text>
     <text x="64" y="565" class="sans" font-size="11" fill="#5A647E">POSIX fsync &amp; SyncDir</text>
 
@@ -380,7 +368,6 @@
     <rect x="854" y="503" width="124" height="21" rx="10.5" fill="#FFF7ED" />
     <text x="916" y="517" text-anchor="middle" class="mono" font-size="10.5" font-weight="700" fill="#F25C05">8,174 virt s/s</text>
 
-    
     <text x="544" y="547" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">vfs.SimFS</text>
     <text x="544" y="565" class="sans" font-size="11" fill="#5A647E">512B sector tearing</text>
 
