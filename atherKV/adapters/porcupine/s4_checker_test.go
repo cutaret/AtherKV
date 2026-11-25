@@ -115,7 +115,7 @@ func TestS4_HTMLTraceViewerGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), "AetherKV Deterministic Simulation Trace Viewer") {
+	if !strings.Contains(buf.String(), "AetherKV / Deterministic Trace Inspector") {
 		t.Fatal("HTML output missing expected header")
 	}
 	t.Logf("[S4 HTML VIEWER PASS] Generated self-contained %d-byte interactive HTML trace viewer.", buf.Len())
