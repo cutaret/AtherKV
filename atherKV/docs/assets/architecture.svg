@@ -1,0 +1,395 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 620" width="1040" height="620" role="img" aria-label="AetherKV System Architecture">
+  <defs>
+    
+    <pattern id="dot-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#CBD5E1" opacity="0.55" />
+    </pattern>
+
+    
+    <linearGradient id="grad-blue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0048FF" />
+      <stop offset="60%" stop-color="#0095FF" />
+      <stop offset="100%" stop-color="#00D4FF" />
+    </linearGradient>
+
+    <linearGradient id="grad-blue-v" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0048FF" />
+      <stop offset="100%" stop-color="#00C2FF" />
+    </linearGradient>
+
+    <linearGradient id="grad-orange" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F25C05" />
+      <stop offset="60%" stop-color="#FF8C00" />
+      <stop offset="100%" stop-color="#FFB703" />
+    </linearGradient>
+
+    <linearGradient id="grad-orange-v" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F25C05" />
+      <stop offset="100%" stop-color="#FFB703" />
+    </linearGradient>
+
+    <linearGradient id="grad-slate" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3E4459" />
+      <stop offset="100%" stop-color="#6A7796" />
+    </linearGradient>
+
+    
+    <filter id="soft-shadow" x="-8%" y="-12%" width="116%" height="132%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#3E4459" flood-opacity="0.08" />
+    </filter>
+    <filter id="pill-shadow" x="-10%" y="-20%" width="120%" height="150%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#3E4459" flood-opacity="0.07" />
+    </filter>
+
+    
+    <marker id="arr-slate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#6A7796" />
+    </marker>
+    <marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#007BFF" />
+    </marker>
+    <marker id="arr-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#F25C05" />
+    </marker>
+
+    
+    <path id="path-kv-raft" d="M 420 194 C 420 220, 270 212, 270 240" />
+    <path id="path-kv-lsm" d="M 620 194 C 620 220, 760 212, 760 240" />
+    <path id="path-seam-prod" d="M 345 448 C 345 470, 270 468, 270 490" />
+    <path id="path-seam-sim" d="M 695 448 C 695 470, 760 468, 760 490" />
+
+    <style>
+      .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif; }
+      .mono { font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace; }
+
+      .flow-line {
+        fill: none;
+        stroke-dasharray: 6 6;
+        animation: dashMove 1.8s linear infinite;
+      }
+      @keyframes dashMove {
+        from { stroke-dashoffset: 24; }
+        to   { stroke-dashoffset: 0; }
+      }
+
+      .pulse-ring {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: pulseOut 2.2s ease-out infinite;
+      }
+      @keyframes pulseOut {
+        0%   { transform: scale(0.9); opacity: 0.75; }
+        100% { transform: scale(2.2); opacity: 0; }
+      }
+
+      /* Interactive Hover States (active when viewed directly or hosted) */
+      .interactive {
+        cursor: pointer;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      .interactive:hover {
+        transform: translateY(-2px);
+      }
+      .pin {
+        cursor: pointer;
+        transition: transform 0.18s ease;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      .pin:hover {
+        transform: translateY(-3px);
+      }
+      .pin:hover rect {
+        stroke: #007BFF;
+        stroke-width: 1.8;
+      }
+    </style>
+  </defs>
+
+  
+  <rect x="0" y="0" width="1040" height="620" rx="18" fill="#F8FAFC" />
+  <rect x="1" y="1" width="1038" height="618" rx="17" fill="url(#dot-grid)" stroke="#E2E8F0" stroke-width="1.5" />
+
+  
+  <rect x="44" y="0" width="220" height="3.5" rx="2" fill="url(#grad-blue)" />
+  <rect x="272" y="0" width="90" height="3.5" rx="2" fill="url(#grad-orange)" />
+
+  
+  <text x="44" y="45" class="sans" font-size="22" font-weight="800" fill="#2B3040" letter-spacing="-0.4">AetherKV</text>
+  <text x="150" y="45" class="sans" font-size="22" font-weight="300" fill="#6A7796">/ System Topology</text>
+  <text x="44" y="66" class="sans" font-size="12.5" fill="#5A647E">Zero-I/O consensus &amp; LSM state machines decoupled from host OS via a 5-pin deterministic seam</text>
+
+  
+  <g class="interactive" filter="url(#pill-shadow)">
+    <title>Static AST &amp; go/types analyzer forbids raw goroutines, time.Now, global rand, and unordered map loops</title>
+    <rect x="752" y="25" width="244" height="34" rx="17" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.2" />
+    <circle cx="774" cy="42" r="4.5" fill="#0095FF" class="pulse-ring" />
+    <circle cx="774" cy="42" r="4.5" fill="#0057FF" />
+    <text x="790" y="46" class="mono" font-size="11.5" font-weight="700" fill="#3E4459">detlint AST · 0 violations</text>
+  </g>
+
+  
+  
+  <path d="M 250 124 C 250 144, 420 132, 465 152" fill="none" stroke="#94A3B8" stroke-width="1.4" />
+  <path d="M 520 124 L 520 152" fill="none" stroke="#94A3B8" stroke-width="1.4" />
+  <path d="M 790 124 C 790 144, 620 132, 575 152" fill="none" stroke="#94A3B8" stroke-width="1.4" />
+
+  <g class="interactive" filter="url(#pill-shadow)">
+    <title>Seeded deterministic workload generator for chaos campaigns</title>
+    <rect x="165" y="94" width="170" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1" />
+    <circle cx="183" cy="109" r="3.5" fill="#6A7796" />
+    <text x="195" y="113" class="sans" font-size="12" font-weight="600" fill="#3E4459">Workload Generator</text>
+  </g>
+
+  <g class="interactive" filter="url(#pill-shadow)">
+    <title>Length-prefixed TCP RPC clients (Put, Get, CAS, Delete, Scan)</title>
+    <rect x="435" y="94" width="170" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1" />
+    <circle cx="453" cy="109" r="3.5" fill="#0095FF" />
+    <text x="465" y="113" class="sans" font-size="12" font-weight="600" fill="#3E4459">TCP RPC Clients</text>
+  </g>
+
+  <g class="interactive" filter="url(#pill-shadow)">
+    <title>Zero-dependency browser playground (cmd/aether-server)</title>
+    <rect x="705" y="94" width="170" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1" />
+    <circle cx="723" cy="109" r="3.5" fill="#FF8C00" />
+    <text x="735" y="113" class="sans" font-size="12" font-weight="600" fill="#3E4459">Web Playground</text>
+  </g>
+
+  
+  <g class="interactive" filter="url(#soft-shadow)">
+    <title>kv/service.go: Client session deduplication, ReadIndex quorum reads, bounded leases, and atomic apply loop</title>
+    <rect x="200" y="152" width="640" height="42" rx="21" fill="#FFFFFF" stroke="url(#grad-blue)" stroke-width="1.6" />
+    <rect x="210" y="160" width="44" height="26" rx="13" fill="url(#grad-blue)" />
+    <text x="232" y="177" text-anchor="middle" class="mono" font-size="11.5" font-weight="700" fill="#FFFFFF">kv</text>
+    <text x="268" y="177" class="sans" font-size="13.5" font-weight="700" fill="#2B3040">Replicated KV Router</text>
+    <text x="424" y="177" class="sans" font-size="12" fill="#5A647E">Session Dedup  ·  ReadIndex Quorum  ·  Bounded Leases  ·  Apply Loop</text>
+  </g>
+
+  
+  <use href="#path-kv-raft" stroke="#0088FF" stroke-width="1.6" class="flow-line" marker-end="url(#arr-blue)" />
+  <use href="#path-kv-lsm" stroke="#5A647E" stroke-width="1.6" class="flow-line" marker-end="url(#arr-slate)" />
+
+  <text x="284" y="216" class="mono" font-size="10.5" font-weight="600" fill="#0066CC">Propose / Ready</text>
+  <text x="668" y="216" class="mono" font-size="10.5" font-weight="600" fill="#5A647E">StateMachine Seam</text>
+
+  
+  <circle r="3.5" fill="#0095FF">
+    <animateMotion dur="2.2s" repeatCount="indefinite" rotate="auto">
+      <mpath href="#path-kv-raft" />
+    </animateMotion>
+  </circle>
+  <circle r="3.5" fill="#3E4459">
+    <animateMotion dur="2.4s" repeatCount="indefinite" rotate="auto">
+      <mpath href="#path-kv-lsm" />
+    </animateMotion>
+  </circle>
+
+  
+
+  
+  <g class="interactive">
+    <title>raft/node.go &amp; raft/wal: Pure zero-I/O state machine with segmented CRC32C WAL and FlushedIndex coupling</title>
+    <rect x="44" y="242" width="452" height="136" rx="20" fill="#F0F7FF" stroke="#D4E6FF" stroke-width="1.2" />
+
+    
+    <g transform="translate(64, 256)">
+      <line x1="12" y1="4" x2="4" y2="18" stroke="#0088FF" stroke-width="1.5" />
+      <line x1="12" y1="4" x2="20" y2="18" stroke="#0088FF" stroke-width="1.5" />
+      <line x1="4" y1="18" x2="20" y2="18" stroke="#0088FF" stroke-width="1.5" />
+      <circle cx="12" cy="4" r="3.5" fill="#0048FF" />
+      <circle cx="4" cy="18" r="3" fill="#00C2FF" />
+      <circle cx="20" cy="18" r="3" fill="#00C2FF" />
+    </g>
+    <text x="96" y="271" class="mono" font-size="13" font-weight="700" fill="#0048FF">raft</text>
+    <text x="136" y="271" class="sans" font-size="13.5" font-weight="700" fill="#2B3040">Pure Zero-I/O Consensus</text>
+
+    
+    <g filter="url(#pill-shadow)">
+      <rect x="64" y="288" width="124" height="32" rx="16" fill="#FFFFFF" stroke="#BFDBFE" stroke-width="1" />
+      <text x="126" y="308" text-anchor="middle" class="sans" font-size="11.5" font-weight="600" fill="#2B3040">Election &amp; Fig. 8</text>
+    </g>
+    <line x1="188" y1="304" x2="204" y2="304" stroke="#0088FF" stroke-width="1.4" marker-end="url(#arr-blue)" />
+
+    <g filter="url(#pill-shadow)">
+      <rect x="208" y="288" width="132" height="32" rx="16" fill="#FFFFFF" stroke="#BFDBFE" stroke-width="1" />
+      <text x="274" y="308" text-anchor="middle" class="mono" font-size="11" font-weight="600" fill="#2B3040">64M CRC32C WAL</text>
+    </g>
+    <line x1="340" y1="304" x2="356" y2="304" stroke="#0088FF" stroke-width="1.4" marker-end="url(#arr-blue)" />
+
+    <g filter="url(#pill-shadow)">
+      <rect x="360" y="288" width="116" height="32" rx="16" fill="#FFFFFF" stroke="#BFDBFE" stroke-width="1" />
+      <text x="418" y="308" text-anchor="middle" class="mono" font-size="11" font-weight="600" fill="#2B3040">InstallSnapshot</text>
+    </g>
+
+    
+    <circle cx="72" cy="349" r="4" fill="#0057FF" />
+    <text x="84" y="353" class="sans" font-size="12" font-weight="600" fill="#3E4459">Option B Fence:</text>
+    <text x="180" y="353" class="mono" font-size="11.5" fill="#0048FF">FlushedIndex</text>
+    <text x="271" y="353" class="sans" font-size="12" fill="#5A647E">truncation cuts fsyncs</text>
+    <rect x="404" y="338" width="72" height="22" rx="11" fill="#0057FF" />
+    <text x="440" y="353" text-anchor="middle" class="mono" font-size="11" font-weight="700" fill="#FFFFFF">-49.9%</text>
+  </g>
+
+  
+  <g class="interactive">
+    <title>lsm/db.go &amp; lsm/vlog.go: 32 KiB fragmented WAL, skiplist memtable, leveled SSTables with 0.78% FP Bloom filters, and WiscKey value separation</title>
+    <rect x="524" y="242" width="472" height="136" rx="20" fill="#F2F4F8" stroke="#DCE2EC" stroke-width="1.2" />
+
+    
+    <g transform="translate(544, 256)">
+      <polygon points="11,2 22,7 11,12 0,7" fill="#3E4459" />
+      <polyline points="0,12 11,17 22,12" fill="none" stroke="#5A647E" stroke-width="1.6" />
+      <polyline points="0,17 11,22 22,17" fill="none" stroke="#F25C05" stroke-width="1.6" />
+    </g>
+    <text x="576" y="271" class="mono" font-size="13" font-weight="700" fill="#3E4459">lsm</text>
+    <text x="610" y="271" class="sans" font-size="13.5" font-weight="700" fill="#2B3040">Leveled Storage + WiscKey</text>
+
+    
+    <g filter="url(#pill-shadow)">
+      <rect x="544" y="288" width="84" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1" />
+      <text x="586" y="307" text-anchor="middle" class="mono" font-size="11" font-weight="600" fill="#2B3040">32K WAL</text>
+    </g>
+    <line x1="628" y1="303" x2="642" y2="303" stroke="#6A7796" stroke-width="1.3" marker-end="url(#arr-slate)" />
+
+    <g filter="url(#pill-shadow)">
+      <rect x="646" y="288" width="86" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1" />
+      <text x="689" y="307" text-anchor="middle" class="sans" font-size="11.5" font-weight="600" fill="#2B3040">Skiplist</text>
+    </g>
+    <line x1="732" y1="303" x2="746" y2="303" stroke="#6A7796" stroke-width="1.3" marker-end="url(#arr-slate)" />
+
+    <g filter="url(#pill-shadow)">
+      <rect x="750" y="288" width="106" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1" />
+      <text x="803" y="307" text-anchor="middle" class="mono" font-size="11" font-weight="600" fill="#2B3040">L0→L2 SSTs</text>
+    </g>
+    <line x1="856" y1="303" x2="870" y2="303" stroke="#6A7796" stroke-width="1.3" marker-end="url(#arr-slate)" />
+
+    <g filter="url(#pill-shadow)">
+      <rect x="874" y="288" width="102" height="30" rx="15" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1" />
+      <text x="925" y="307" text-anchor="middle" class="mono" font-size="10.8" font-weight="600" fill="#3E4459">Bloom 0.78%</text>
+    </g>
+
+    
+    <path d="M 586 318 L 586 333" fill="none" stroke="#F25C05" stroke-width="1.5" marker-end="url(#arr-orange)" />
+    <rect x="544" y="335" width="432" height="30" rx="15" fill="#FFF7ED" stroke="url(#grad-orange)" stroke-width="1.2" />
+    <text x="562" y="354" class="sans" font-size="11.5" font-weight="700" fill="#F25C05">WiscKey VLog</text>
+    <text x="652" y="354" class="sans" font-size="11.5" fill="#5A647E">Values ≥4 KiB → 24B Pointer · Llama-3 KV-Cache</text>
+    <rect x="898" y="340" width="72" height="20" rx="10" fill="url(#grad-orange)" />
+    <text x="934" y="354" text-anchor="middle" class="mono" font-size="10.5" font-weight="700" fill="#FFFFFF">1.00x WA</text>
+  </g>
+
+  
+  
+  <path d="M 170 378 L 170 416" fill="none" stroke="#94A3B8" stroke-width="1.3" />
+  <path d="M 345 378 L 345 416" fill="none" stroke="#94A3B8" stroke-width="1.3" />
+  <path d="M 695 378 L 695 416" fill="none" stroke="#94A3B8" stroke-width="1.3" />
+  <path d="M 870 378 L 870 416" fill="none" stroke="#94A3B8" stroke-width="1.3" />
+
+  
+  <text x="44" y="407" class="mono" font-size="10" font-weight="700" letter-spacing="1.6" fill="#5A647E">HOST-INTERFACE DETERMINISM SEAM</text>
+
+  
+  <line x1="44" y1="432" x2="996" y2="432" stroke="url(#grad-slate)" stroke-width="3" stroke-linecap="round" />
+  <line x1="44" y1="432" x2="996" y2="432" stroke="#00C2FF" stroke-width="1.5" stroke-dasharray="10 38" class="flow-line" />
+
+  
+  <g class="pin" filter="url(#pill-shadow)">
+    <title>sim.Clock: Monotonic virtual clock with per-node static offset and PPM drift</title>
+    <rect x="103" y="416" width="134" height="32" rx="16" fill="#FFFFFF" stroke="#3E4459" stroke-width="1.3" />
+    <circle cx="121" cy="432" r="4" fill="#0057FF" />
+    <text x="133" y="436" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">sim.Clock</text>
+  </g>
+
+  <g class="pin" filter="url(#pill-shadow)">
+    <title>sim.Rand: Stream-isolated xoshiro256** PRNG seeded via SHA-256 domain separation</title>
+    <rect x="278" y="416" width="134" height="32" rx="16" fill="#FFFFFF" stroke="#3E4459" stroke-width="1.3" />
+    <circle cx="296" cy="432" r="4" fill="#0095FF" />
+    <text x="308" y="436" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">sim.Rand</text>
+  </g>
+
+  <g class="pin" filter="url(#pill-shadow)">
+    <title>sim.Scheduler: Single-threaded min-heap priority queue ordered by (timeNs, seq)</title>
+    <rect x="453" y="416" width="134" height="32" rx="16" fill="#FFFFFF" stroke="#3E4459" stroke-width="1.3" />
+    <circle cx="471" cy="432" r="4" fill="#5A647E" />
+    <text x="483" y="436" class="mono" font-size="11" font-weight="700" fill="#2B3040">Scheduler</text>
+  </g>
+
+  <g class="pin" filter="url(#pill-shadow)">
+    <title>sim.Transport: Switches seamlessly between SimNet chaos matrix and real TCP sockets</title>
+    <rect x="628" y="416" width="134" height="32" rx="16" fill="#FFFFFF" stroke="#3E4459" stroke-width="1.3" />
+    <circle cx="646" cy="432" r="4" fill="#FF8C00" />
+    <text x="658" y="436" class="mono" font-size="11" font-weight="700" fill="#2B3040">Transport</text>
+  </g>
+
+  <g class="pin" filter="url(#pill-shadow)">
+    <title>vfs.FS: Swaps between POSIX OSFS and crashable 512B sector-tearing SimFS</title>
+    <rect x="803" y="416" width="134" height="32" rx="16" fill="#FFFFFF" stroke="#3E4459" stroke-width="1.3" />
+    <circle cx="821" cy="432" r="4" fill="#F25C05" />
+    <text x="833" y="436" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">vfs.FS</text>
+  </g>
+
+  
+  
+  <path d="M 170 448 C 170 472, 170 470, 170 490" fill="none" stroke="#0088FF" stroke-width="1.4" opacity="0.5" />
+  <use href="#path-seam-prod" stroke="#007BFF" stroke-width="1.6" class="flow-line" marker-end="url(#arr-blue)" />
+  <circle r="3.5" fill="#007BFF">
+    <animateMotion dur="2s" repeatCount="indefinite">
+      <mpath href="#path-seam-prod" />
+    </animateMotion>
+  </circle>
+
+  <path d="M 870 448 C 870 472, 870 470, 870 490" fill="none" stroke="#F25C05" stroke-width="1.4" opacity="0.5" />
+  <use href="#path-seam-sim" stroke="#F25C05" stroke-width="1.6" class="flow-line" marker-end="url(#arr-orange)" />
+  <circle r="3.5" fill="#F25C05">
+    <animateMotion dur="1.8s" repeatCount="indefinite">
+      <mpath href="#path-seam-sim" />
+    </animateMotion>
+  </circle>
+
+  
+  <g class="interactive" filter="url(#soft-shadow)">
+    <title>Production backend using real OS filesystem calls and length-prefixed TCP sockets</title>
+    <rect x="44" y="492" width="452" height="98" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.2" />
+    <rect x="44" y="508" width="4.5" height="66" rx="2.25" fill="url(#grad-blue-v)" />
+
+    <text x="64" y="518" class="sans" font-size="14" font-weight="800" fill="#0048FF">Production Runtime</text>
+    <rect x="380" y="503" width="98" height="21" rx="10.5" fill="#EFF6FF" />
+    <text x="429" y="517" text-anchor="middle" class="mono" font-size="10.5" font-weight="700" fill="#0057FF">Real OS I/O</text>
+
+    
+    <text x="64" y="547" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">vfs.OSFS</text>
+    <text x="64" y="565" class="sans" font-size="11" fill="#5A647E">POSIX fsync &amp; SyncDir</text>
+
+    <line x1="202" y1="536" x2="202" y2="572" stroke="#E2E8F0" stroke-width="1" />
+    <text x="216" y="547" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">transport/tcp</text>
+    <text x="216" y="565" class="sans" font-size="11" fill="#5A647E">4B BE framed sockets</text>
+
+    <line x1="354" y1="536" x2="354" y2="572" stroke="#E2E8F0" stroke-width="1" />
+    <text x="368" y="547" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">OS Clock</text>
+    <text x="368" y="565" class="sans" font-size="11" fill="#5A647E">3-node live cluster</text>
+  </g>
+
+  
+  <g class="interactive" filter="url(#soft-shadow)">
+    <title>Deterministic Simulation Kernel: 20,000 runs at 8,174 virtual sec/real sec with 17/17 Bug Zoo detections</title>
+    <rect x="524" y="492" width="472" height="98" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.2" />
+    <rect x="524" y="508" width="4.5" height="66" rx="2.25" fill="url(#grad-orange-v)" />
+
+    <text x="544" y="518" class="sans" font-size="14" font-weight="800" fill="#F25C05">Deterministic Simulation Kernel</text>
+    <rect x="854" y="503" width="124" height="21" rx="10.5" fill="#FFF7ED" />
+    <text x="916" y="517" text-anchor="middle" class="mono" font-size="10.5" font-weight="700" fill="#F25C05">8,174 virt s/s</text>
+
+    
+    <text x="544" y="547" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">vfs.SimFS</text>
+    <text x="544" y="565" class="sans" font-size="11" fill="#5A647E">512B sector tearing</text>
+
+    <line x1="688" y1="536" x2="688" y2="572" stroke="#E2E8F0" stroke-width="1" />
+    <text x="702" y="547" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">sim.SimNet</text>
+    <text x="702" y="565" class="sans" font-size="11" fill="#5A647E">Partitions + Shrinker</text>
+
+    <line x1="840" y1="536" x2="840" y2="572" stroke="#E2E8F0" stroke-width="1" />
+    <text x="854" y="547" class="mono" font-size="11.5" font-weight="700" fill="#2B3040">Verification</text>
+    <text x="854" y="565" class="sans" font-size="11" fill="#5A647E">6 Invariants + Porcupine</text>
+  </g>
+</svg>
