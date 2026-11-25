@@ -1,272 +1,252 @@
 # AetherKV: Simulation-First Replicated Key-Value Store (Raft + LSM + WiscKey)
 
-AetherKV is a linearizable, crash-safe replicated key-value storage engine written in Go with zero external runtime dependencies. Every consensus transition, storage compaction, disk crash, and network fault can be replayed deterministically from a single 64-bit seed.
+[![CI Verification](https://github.com/cutaret/AtherKV/actions/workflows/ci.yml/badge.svg)](https://github.com/cutaret/AtherKV/actions/workflows/ci.yml)
+[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Zero Dependencies](https://img.shields.io/badge/runtime_deps-0-14B8A6)](#)
+[![Interactive Trace](https://img.shields.io/badge/Live_Trace-Bug_Zoo_%2313-F25C05)](https://cutaret.github.io/AtherKV/trace_zoo13.html)
 
-Rather than competing with production engines like etcd or Pebble on feature count, AetherKV treats the database as a subject for rigorous systems verification. Its primary engineering artifacts are a deterministic simulation testing (DST) kernel, a sector-tearing virtual filesystem, a Porcupine linearizability checker with multi-key range-scan verification, a 17-entry reproducible Bug Zoo, and a WiscKey value-separation engine benchmarked on Llama-3-8B KV-cache tensor blocks.
+**AetherKV** is a linearizable, crash-safe replicated key-value storage engine written in Go with **zero external runtime dependencies**. Every consensus transition, LSM compaction, 512-byte sector tear, and network partition replays deterministically from a single 64-bit seed—achieving **100% rolling SHA-256 trace agreement across 20,000 runs at 8,174 virtual seconds per real second**.
 
-## System Architecture
+- **Interactive Time-Travel Debugger:** [Explore a live delta-shrunk split-brain trace in your browser (Bug Zoo #13)](https://cutaret.github.io/AtherKV/trace_zoo13.html)
+- **Verification Proof:** Uncovered **7 real, unplanted consensus/crash bugs**, caught **17/17 planted Bug Zoo mutations** within 1–4 seeds, and survived **940K+ native Go fuzz executions** across 4 binary parser targets with zero panics or OOMs.
+- **Linux NVMe Storage Results (`fsync=ON`):** `FlushedIndex`-gated Raft truncation cuts `fsync` calls by **49.9% (+96.4% throughput, -57.4% p99)**, and WiscKey value separation slashes Write Amplification from **3.67x to 1.00x (5.2x throughput, 2.06x faster than Pebble v1.1.5)** on 2 MiB Llama-3-8B KV-cache blocks.
 
-```text
-+-----------------------------------------------------------------------+
-| Clients: Deterministic Workload Generators / Length-Prefixed TCP      |
-+-----------------------------------+-----------------------------------+
-                                    | Put / Get / Delete / CAS / Scan
-                                    v
-+-----------------------------------------------------------------------+
-| kv: Client Sessions (Dedup), ReadIndex, Bounded Leases, Apply Loop    |
-+-----------------+-----------------------------------+-----------------+
-                  | Propose / Ready                   | StateMachine Seam
-                  v                                   v
-+-----------------------------------+   +-------------------------------+
-| raft: Pure Zero-I/O State Machine |   | statemachine: MemStore Oracle |
-| + Segmented CRC32C Raft WAL       |   | or LSMStore (32KiB WAL, SSTs, |
-+-----------------+-----------------+   | Leveled Compaction, WiscKey)  |
-                  |                     +-------------+-----------------+
-                  +-----------------+-----------------+
-                                    |
-        +---------------------------v---------------------------+
-        | Seam: Clock | Transport | FS | Rand | Scheduler       |
-        +-------------+---------------------------+-------------+
-                      |                           |
-                      v                           v
-        +---------------------------+ +-------------------------+
-        | Production: OSFS & TCP    | | Simulation: Seeded      |
-        | Sockets (127.0.0.1)       | | Chaos, SimFS & Checkers |
-        +---------------------------+ +-------------------------+
+<p align="center">
+  <img src="atherKV/docs/assets/architecture.svg" alt="AetherKV System Architecture" width="100%">
+</p>
+
+<p align="center">
+  <img src="atherKV/docs/assets/demo.gif" alt="AetherKV detlint, Bug Zoo #13 fault shrinker, and 20,000-run determinism check" width="92%">
+</p>
+
+## 30-Second Quickstart
+
+```bash
+git clone [https://github.com/cutaret/AtherKV.git](https://github.com/cutaret/AtherKV.git)
+cd AtherKV/atherKV
+
+# 1. Run the static AST/type determinism linter across all core state-machine packages
+go run ./cmd/detlint statemachine raft lsm kv
+
+# 2. Replay Bug Zoo #13 (4-node split-brain), shrink 20 faults to 3, and export HTML trace
+go run ./cmd/simrun -seed 4 -nodes 4 -bug 13 -html docs/trace_zoo13.html
+
+# 3. Run the full verification suite (Stages S0–S4 + all 17 Bug Zoo entries + fuzz seed corpora)
+go test -p 1 ./... -count=1
+
+# 4. Launch the interactive 3-node Raft + LSM browser playground on http://localhost:8080
+go run ./cmd/aether-server
 ```
 
-Every package above the host-interface seam (`raft`, `lsm`, `kv`, `statemachine`) is a pure state machine with zero direct access to the operating system. All external side effects pass through five explicit interfaces defined in **sim/interfaces.go** and **vfs/vfs.go**:
+_(From the repository root `AtherKV/`, you can also run `make lint`, `make test`, `make race`, `make fuzz`, `make sim-zoo13`, `make bench`, or `make playground`.)_
 
-- **Clock (`sim.Clock`):** Provides monotonic virtual time (`Now()`) with configurable per-node static offset and linear clock drift in parts-per-million (PPM).
-- **Randomness (`sim.Rand`):** Provides isolated `xoshiro256**` pseudo-random streams seeded via SHA-256 domain separation (`SHA-256(masterSeed, streamName)`).
-- **Scheduler (`sim.Scheduler`):** Replaces background goroutines with deterministic task queues ordered by virtual timestamp and sequence number.
-- **Network Transport (`sim.Transport`):** Routes RPC messages through either the fault-injecting `SimNet` matrix or real length-prefixed TCP sockets.
-- **Filesystem (`vfs.FS` and `vfs.File`):** Abstracts file and directory operations across real disk I/O (`OSFS`) and our crashable in-memory filesystem (`SimFS`).
+---
 
-## Mechanical Determinism Enforcement
+## Architecture & Mechanical Determinism Enforcement
 
-Determinism in Go is easily broken by accidental runtime non-determinism. AetherKV enforces deterministic execution at compile/lint time via a custom static AST and `go/types` analyzer located in **internal/detlint/analyzer.go** and **cmd/detlint/main.go**.
+Every package above the host-interface seam (`raft`, `lsm`, `kv`, `statemachine`) is a pure state machine with zero direct access to the operating system. All external side effects cross five explicit interfaces defined in `atherKV/sim/interfaces.go` and `atherKV/vfs/vfs.go`:
 
-- **No Raw Goroutines:** Forbids `go func()` statements inside core packages so the Go runtime scheduler cannot interleave state transitions non-deterministically.
-- **No Wall-Clock Reads:** Forbids calls to `time.Now`, `time.Since`, `time.After`, and `time.Sleep`, requiring all timeouts to use `sim.Clock`.
-- **No Global PRNGs:** Forbids importing `math/rand`, `math/rand/v2`, or `crypto/rand`, ensuring all randomness flows through isolated `sim.Rand` streams.
-- **No Unordered Map Iteration:** Forbids `for k, v := range mapVar` loops unless keys are first extracted and sorted via `slices.Sort`.
+- **`sim.Clock`:** Monotonic virtual time with configurable per-node static offset and linear drift in parts-per-million (PPM).
+- **`sim.Rand`:** Stream-isolated `xoshiro256**` PRNGs seeded via SHA-256 domain separation (`SHA-256(masterSeed, streamName)`).
+- **`sim.Scheduler`:** Single-threaded min-heap event queue ordered by `(timeNs, seq)` replacing background goroutines.
+- **`sim.Transport`:** Switches seamlessly between the fault-injecting `SimNet` chaos matrix and 4-byte Big-Endian length-prefixed TCP sockets (`transport/tcp`).
+- **`vfs.FS` / `vfs.File`:** Abstracts POSIX disk I/O (`OSFS`) and the crashable 512-byte sector-tearing filesystem (`SimFS`).
 
-## Core Subsystems Deep Dive
+Determinism is enforced mechanically in CI by **`cmd/detlint`** (`internal/detlint/analyzer.go`), a custom `go/ast` + `go/types` static analyzer that rejects:
 
-### 1. Deterministic Simulation Kernel (`sim`)
+- Raw `go func()` goroutine spawns inside core packages.
+- Wall-clock reads (`time.Now`, `time.Since`, `time.After`, `time.Sleep`).
+- Global PRNG imports (`math/rand`, `math/rand/v2`, `crypto/rand`).
+- Non-deterministic `for k, v := range mapVar` iteration (requiring explicit key extraction and `slices.Sort`).
 
-- **Single-Threaded Event Loop:** Executes all timers, network deliveries, storage callbacks, and fault injections on a single OS thread using a min-heap priority queue ordered by `(timeNs, seq)`.
-- **Stream-Isolated PRNG (`StreamRand`):** Assigns independent PRNG streams to the network, nemesis, workload generator, and individual nodes so mutating fault rates never alters client workloads.
-- **Rolling Trace Hash Verification:** Logs every state transition into a structured JSON-lines trace and updates a rolling SHA-256 chain hash to prove bit-for-bit reproducibility across runs.
-- **Network Nemesis & Fault Shrinker:** Injects symmetric/asymmetric partitions, packet drops, reordering, and node pauses, then uses delta-debugging (`ShrinkFaultSchedule`) to find minimal failure schedules.
+See **[`atherKV/docs/WIRE_FORMAT.md`](atherKV/docs/WIRE_FORMAT.md)** for the complete byte-level specification of the 25-byte Raft WAL frame, 32 KiB fragmented LSM WAL, 40-byte SSTable footer (`0xAE74E255`), 24-byte `VLogPointer`, and TCP framing.
 
-### 2. Crashable Sector-Tearing Filesystem (`vfs`)
+---
 
-- **Dual-Buffer Persistence Model:** Separates every open file into a `volatileData` page-cache buffer and a `durableData` disk buffer that only advances on explicit `Sync()` calls.
-- **Directory Metadata Durability:** Tracks `durableMeta` and `overwritten` pointers per directory entry so newly created or renamed files vanish upon crash unless `SyncDir()` was called on the parent directory.
-- **Sector-Granular Torn Writes:** Splits unsynced byte ranges across 512-byte hardware sectors during `SimFS.Crash()`, independently choosing whether each sector is lost, persisted, or torn mid-sector with `0xAA` garbage bytes.
+## Core Subsystems
 
-### 3. Zero-I/O Raft Consensus & Segmented WAL (`raft`)
+- **Deterministic Simulation Kernel (`sim`):** Single-threaded discrete-event loop with stream-isolated PRNGs, rolling SHA-256 trace chain hashing, network nemesis (symmetric/asymmetric partitions, drops, reordering, pauses), and delta-debugging fault schedule shrinking (`ShrinkFaultSchedule`).
+- **Sector-Tearing Virtual Filesystem (`vfs`):** Separates `volatileData` (page cache) from `durableData` (synced disk), tracks directory metadata durability (`SyncDir`), and splits unsynced writes across 512-byte sectors during `SimFS.Crash()` to inject dropped, persisted, or mid-sector `0xAA`-torn writes.
+- **Zero-I/O Raft Consensus & Segmented WAL (`raft`, `raft/wal`):** Pure `Step`/`Tick` → `Ready` state machine supporting leader election, Figure 8 commit safety, Raft Section 6.4 `ReadIndex` (with current-term no-op barrier), clock-bounded leader leases, `InstallSnapshot`, a 64 MiB segmented CRC32C WAL, and a step-by-step global 6-invariant observer (`raft/observer.go`).
+- **Crash-Safe Leveled LSM & WiscKey Value Log (`lsm`):** 32 KiB block-fragmented WAL with group commit, deterministic MVCC skiplist `(UserKey ASC, SeqNum DESC)`, 4 KiB CRC32C SSTables with double-hashing Bloom filters (0.78% FP rate at 10 bits/key), atomic `MANIFEST`/`CURRENT` rotation, snapshot-pinned leveled compaction ($L_0 \rightarrow L_1 \rightarrow L_2$), and WiscKey value separation (`vlog` segments + 24-byte LSM pointers + online segment GC).
+- **Linearizability & Range-Scan Checker (`adapters/porcupine`):** Zero-dependency Wing & Gong + Lowe bitmask linearizability checker supporting `PUT`, `GET`, `DELETE`, `CAS`, indeterminate timeouts (`[invokeNs, +Inf)`), full-keyspace multi-key `SCAN` verification, and automatic counterexample shrinking.
 
-- **Pure State Machine (`raft.Node`):** Processes inputs via `Step(msg)`, `Tick()`, `Propose(data)`, and `ReadIndex(id)` without performing any disk or network I/O, returning a `raft.Ready` batch of effects.
-- **Linearizable Reads & Bounded Leases:** Implements quorum-verified `ReadIndex` heartbeats (including the Raft Dissertation Section 6.4 current-term no-op rule) and clock-skew-aware leader leases (`leaseDuration - maxDriftBound`).
-- **Segmented CRC32C WAL (`raft/wal`):** Persists Raft log entries and `HardState` into 64 MiB segments with 25-byte headers, Castagnoli CRC32C checksums, torn-tail truncation, and prefix/suffix compaction.
-- **Global Six-Invariant Observer:** Inspects every node after every simulation step to verify Election Safety, Log Matching, Leader Completeness, State Machine Safety, Term Monotonicity, and Committed Durability.
+---
 
-### 4. Crash-Safe Leveled LSM Engine (`lsm`)
+## Verification Campaigns & Native Fuzzing
 
-- **32 KiB Block-Fragmented WAL:** Encodes atomic `WriteBatch` mutations into fixed 32 KiB blocks using `FragFull`, `FragFirst`, `FragMiddle`, and `FragLast` headers with CRC32C verification and group commit.
-- **Skiplist Memtable & MVCC Ordering:** Orders keys in memory by `(UserKey ASC, SeqNum DESC)` using deterministic skiplist tower heights so point lookups and snapshot reads resolve the newest visible version first.
-- **Checksummed SSTables & Bloom Filters:** Flushes immutable Memtables into SSTables containing 4 KiB data blocks, a double-hashing Bloom filter block (10 bits/key), a binary-searchable index block, and a 40-byte magic footer (`0xAE74E255`).
-- **Atomic `MANIFEST` Rotation:** Logs `VersionEdit` transitions (added/deleted files, `LastSeq`, `FlushedIndex`) to a `MANIFEST` file and switches `CURRENT` via write-temp, `Sync()`, atomic `Rename()`, and `SyncDir()`.
-- **Snapshot-Pinned Leveled Compaction:** Compacts overlapping $L_0$ files into sorted, key-disjoint $L_1$ and $L_2$ levels, dropping deletion tombstones only at the bottommost level when no older snapshot sequence number is pinned.
+| Stage | Campaign                      | Scale                          | Result                 | Speed / Time     |
+| :---- | :---------------------------- | :----------------------------- | :--------------------- | :--------------- |
+| S0    | Trace Hash Determinism        | 20,000 runs (10K seeds x 2)    | 100% SHA-256 match     | 8,174 virt s/s   |
+| S1    | 3/4/5-Node Chaos              | 150 runs                       | 0 invariant violations | 196 virt s/s     |
+| S2    | Differential Crash Test       | 5,000 ops + 20 crashes         | 100% oracle match      | 0.18 s total     |
+| S2    | SSTable Bloom Filter          | 10,000 negative probes         | 0.78% FP (0% FN)       | < 1 ms           |
+| S3    | Full-Stack Raft + LSM         | 30 seeds                       | 0 violations           | 78 ms total      |
+| S3    | Real TCP 3-Node Crash         | 3 OS sockets (`127.0.0.1`)     | Linearizable           | 0.52 s total     |
+| S4    | Linearizability Oracle        | 1,000 random histories         | 100% match             | Shrunk 7 → 2 ops |
+| Fuzz  | Native Go Fuzzing (4 targets) | 940,551 executions (5s/target) | 0 panics / 0 OOMs      | 35.4 s total     |
 
-### 5. WiscKey Value Log Separation (`lsm/vlog.go`)
+**Native Go Fuzz Targets:** `FuzzRaftWALRecover` (212K execs), `FuzzLSMWALAndBatchDecode` (189K execs), `FuzzSSTableOpen` (336K execs), and `FuzzPorcupineChecker` (203K execs). All seed corpora run automatically in GitHub Actions CI.
 
-- **Pointer-Based Value Separation:** Stores values at or above `ValueLogThreshold` (4 KiB) in append-only `vlog` segments while writing only a 24-byte `VLogPointer` (`SegmentID`, `Offset`, `Length`, `Checksum`) into the LSM tree.
-- **Write-Ordering Crash Contract:** Enforces `ValueLog.Sync()` before committing the referencing LSM `WriteBatch` so surviving LSM pointers never reference un-synced or out-of-bounds value-log offsets after power loss.
-- **Online Segment Garbage Collection:** Scans older `vlog` segments during `RunVLogGC()`, relocates values whose pointers are still live in the LSM tree into the active segment, commits updated pointers, and unlinks dead segments.
+---
 
-### 6. Linearizability & Range-Scan Checker (`adapters/porcupine`)
+## Verified Linux NVMe Benchmarks & Pebble Baseline
 
-- **Point-Operation Linearizability:** Implements Wing & Gong graph search with Lowe bitmask memoization (`checkSingleKey`) and P-compositionality to verify `PUT`, `GET`, and `CAS` histories, treating client timeouts as `[invokeNs, +Inf)`.
-- **Multi-Key Range-Scan Verification:** Switches to full keyspace state-transition search (`checkMultiKeyScan`) whenever `SCAN` operations are present, catching fractured cross-key range reads that per-key checkers miss.
-- **Counterexample Shrinking & Causal Explanations:** Reduces failing client histories down to 1 to 3 minimal conflicting operations and generates plain-English stale-read explanations.
+All benchmark numbers below were captured via GitHub Actions (`.github/workflows/bench-linux.yml`) across **5 runs per workload** using incompressible high-entropy payloads (modeling FP16 KV-cache tensors) with real POSIX `fsync()` enabled (`vfs.OSFS`). Raw JSON/CSV/hardware artifacts live in [`atherKV/bench/results/`](atherKV/bench/results/).
 
-## Empirical Verification & Benchmark Results
+> **Hardware & OS (`linux_hardware.txt`):** AMD EPYC 9V74 (4 vCPUs, `x86_64`), 15 GiB RAM, Linux `7.0.0-1020-azure`, `ext4` on `MSFT NVMe Accelerator v1.0` (`ROTA=0`), `go1.23.12`.
 
-### Simulator Determinism & Verification Campaigns
+### 1. AetherKV vs. CockroachDB Pebble v1.1.5 (`fsync=ON`, 5-Run Median)
 
-| Stage | Campaign                | Scale           | Result        | Speed             |
-| :---- | :---------------------- | :-------------- | :------------ | :---------------- |
-| S0    | Trace Hash Determinism  | 20,000 runs     | 100% match    | 8,174 virt s/s    |
-| S1    | 3/4/5-Node Chaos        | 150 runs        | 0 violations  | 196 virt s/s      |
-| S2    | Differential Crash Test | 5,000 ops       | 100% match    | 0.18 s total      |
-| S2    | SSTable Bloom Filter    | 10,000 probes   | 0.78% FP rate | < 1 ms            |
-| S3    | Full-Stack Raft+LSM     | 30 seeds        | 0 violations  | 78 ms total       |
-| S3    | Real TCP 3-Node Crash   | 3 sockets       | Linearizable  | 0.52 s total      |
-| S4    | Linearizability Oracle  | 1,000 histories | 100% match    | Shrunk 7 to 2 ops |
+Pebble lives inside an isolated submodule (`atherKV/bench/pebble_compare/go.mod`) so core AetherKV remains at **0 external dependencies**. Both engines ran sequentially on the same Linux NVMe filesystem with synchronous durability (`OSFS fsync=ON` vs. `pebble.Sync`):
 
-The table above summarizes the automated verification gates across Stages S0 through S4. In Stage S0, 10,000 distinct seeds are executed twice (20,000 runs total), achieving 100% agreement on rolling SHA-256 trace hashes at 8,174 virtual seconds per real second. In Stage S2, `LSMStore` is tested against `statemachine.MemStore` across 5,000 randomized operations and 20 power-loss crashes with 0% false negatives on Bloom filter probes.
+| Workload                         | Engine                             | Med Ops/s | Med MiB/s |    p50 (us) |     p99 (us) |
+| :------------------------------- | :--------------------------------- | --------: | --------: | ----------: | -----------: |
+| YCSB-A (50% Put / 50% Get, 256B) | AetherKV (`OSFS`, `fsync=ON`)      |     5,594 |       1.4 |       145.8 |        386.2 |
+| YCSB-A (50% Put / 50% Get, 256B) | CockroachDB Pebble v1.1.5 (`Sync`) |     9,066 |       2.2 |       147.3 |        403.4 |
+| YCSB-B (5% Put / 95% Get, 256B)  | AetherKV (`OSFS`, `fsync=ON`)      |    73,114 |      17.9 |         0.2 |        182.5 |
+| YCSB-B (5% Put / 95% Get, 256B)  | CockroachDB Pebble v1.1.5 (`Sync`) |    76,158 |      18.6 |         0.3 |        192.8 |
+| 128 KiB Llama-3 1-Token KV Block | AetherKV Inline LSM (`OSFS`)       |       254 |      31.8 |     2,029.0 |     41,468.4 |
+| 128 KiB Llama-3 1-Token KV Block | **AetherKV WiscKey VLog (`OSFS`)** | **1,234** | **154.3** |   **497.5** |  **4,812.2** |
+| 128 KiB Llama-3 1-Token KV Block | CockroachDB Pebble v1.1.5 (`Sync`) |     1,316 |     164.5 |       372.3 |      2,827.8 |
+| 2 MiB Llama-3 16-Token KV Block  | AetherKV Inline LSM (`OSFS`)       |        20 |      40.5 |    22,195.7 |     90,003.6 |
+| 2 MiB Llama-3 16-Token KV Block  | **AetherKV WiscKey VLog (`OSFS`)** |   **112** | **224.2** | **8,782.8** | **29,952.9** |
+| 2 MiB Llama-3 16-Token KV Block  | CockroachDB Pebble v1.1.5 (`Sync`) |        54 |     108.6 |    16,475.4 |     42,467.6 |
 
-### Reproducible 5-Run Benchmark Suite
+_Notes:_ Pebble v1.1.5 leads on write-heavy 256B YCSB-A (1.6x) due to concurrent WAL batching and background compaction, while AetherKV stays within 4% of Pebble on read-heavy YCSB-B and outperforms Pebble v1.1.5 by **2.06x** on 2 MiB blocks because Pebble v1.1.5 compacts values inline without value-log separation (later Pebble v2 releases introduced separate blob-file value storage).
 
-| Workload                         | Med Ops/s | Med MiB/s | p99 (us) | Write Amp |
-| :------------------------------- | --------: | --------: | -------: | --------: |
-| YCSB-A (50% Put / 50% Get)       |    59,803 |      14.6 |    577.2 |     3.47x |
-| YCSB-B (5% Put / 95% Get)        |   154,565 |      37.7 |    < 1.0 |     3.45x |
-| YCSB-E (5% Put / 95% Scan)       |    11,042 |       2.7 |  2,827.7 |     3.49x |
-| 3-Node Cluster (Write/ReadIndex) |     6,963 |         - |  4,165.5 |     1.00x |
-| Option A (Dual Fsync)            |    21,658 |         - |  1,784.2 |     1.00x |
-| Option B (Single Fsync)          |    28,481 |         - |  1,497.9 |     1.00x |
-| 128 KiB Inline LSM               |       651 |      81.3 |  8,684.0 |     4.50x |
-| 128 KiB WiscKey Separated        |     2,260 |     282.5 |  2,259.2 |     1.00x |
-| 2 MiB Inline LSM                 |        67 |     134.8 | 35,957.6 |     3.67x |
-| 2 MiB WiscKey Separated          |       293 |     586.9 |  8,090.9 |     1.00x |
+### 2. Unified 5-Run Llama-3-8B KV-Cache Block Sweep (`OSFS`, Real POSIX `fsync=ON`)
 
-All benchmarks above were executed via `cmd/benchrun` across 5 repetitions per workload on `windows/amd64` with `fsync` enabled. Option B durability coupling (skipping LSM WAL `fsync`s and gating Raft log prefix truncation on `FlushedIndex`) reduces total `fsync` calls across 200 writes from 401 to 201 (49.9% fewer `fsync`s), boosting write throughput by 31.5% and cutting p99 latency by 16.0%.
+Llama-3-8B KV-cache tensor geometry: $2\ (\text{K,V}) \times 32\ \text{layers} \times 8\ \text{KV heads} \times 128\ \text{dim} \times 2\ \text{B (FP16)} = 128\ \text{KiB/token}$, or **2 MiB** per 16-token PagedAttention block.
 
-### Granular Llama-3-8B KV-Cache Block Size Sweep
+| Block Size                    | Inline WA | WiscKey WA | Inline MiB/s | WiscKey MiB/s | Inline p99 (us) | WiscKey p99 (us) |  Speedup |
+| :---------------------------- | --------: | ---------: | -----------: | ------------: | --------------: | ---------------: | -------: |
+| 1 KiB (Below 4 KiB Threshold) |     2.91x |      2.91x |          1.8 |           1.6 |         9,299.7 |          4,787.4 |     0.9x |
+| 16 KiB Chunk                  |     4.65x |  **1.02x** |          7.1 |      **25.9** |        53,137.3 |      **1,122.0** | **3.6x** |
+| 128 KiB (1-Token Block)       |     4.50x |  **1.00x** |         38.8 |     **157.5** |        18,302.4 |      **1,748.8** | **4.1x** |
+| 512 KiB (4-Token Block)       |     4.00x |  **1.00x** |         46.6 |     **233.9** |        49,172.4 |      **6,341.4** | **5.0x** |
+| 2 MiB (16-Token Block)        |     3.67x |  **1.00x** |         49.1 |     **256.0** |       112,999.4 |      **9,970.0** | **5.2x** |
 
-| Block Size              | Inline WA | WiscKey WA | Inline MiB/s | WiscKey MiB/s |
-| :---------------------- | --------: | ---------: | -----------: | ------------: |
-| 1 KiB (Below Threshold) |     2.96x |      2.96x |         74.7 |          74.6 |
-| 16 KiB Chunk            |     4.82x |      1.01x |         23.8 |          57.1 |
-| 128 KiB (1-Token Block) |     4.80x |      1.00x |         66.2 |         101.7 |
-| 512 KiB (4-Token Block) |     4.25x |      1.00x |        109.2 |       1,264.5 |
-| 2 MiB (16-Token Block)  |     3.50x |      1.00x |        171.2 |       1,046.1 |
+### 3. Durability Coupling & Core YCSB/Cluster Suite (`OSFS` vs. `SimFS`)
 
-Block sizes are derived directly from Llama-3-8B KV-cache tensor geometry: 2 (K and V) x 32 layers x 8 KV heads x 128 head dimension x 2 bytes (FP16) equals 131,072 bytes (128 KiB) per token, or 2 MiB for a 16-token PagedAttention block. Separating values >= 4 KiB into the WiscKey `ValueLog` eliminates SSTable compaction copying, dropping Write Amplification to 1.00x and increasing single-run throughput by up to 11.6x on 512 KiB blocks and 6.1x on 2 MiB blocks.
+| Workload                                          | `OSFS` Med Ops/s (`fsync=ON`) |      `OSFS` p99 (us) | `SimFS` Med Ops/s (CPU/Arch) | Write Amp |           Fsyncs |
+| :------------------------------------------------ | ----------------------------: | -------------------: | ---------------------------: | --------: | ---------------: |
+| YCSB-A (50% Put / 50% Get)                        |                         2,453 |              2,552.1 |                      162,587 |     3.47x |                - |
+| YCSB-B (5% Put / 95% Get)                         |                        17,291 |                238.3 |                      358,497 |     3.45x |                - |
+| YCSB-E (5% Put / 95% Scan)                        |                         8,869 |                284.8 |                       33,899 |     3.49x |                - |
+| 3-Node Cluster (50% Write / 50% `ReadIndex`)      |                           239 |             67,338.4 |                       15,020 |     1.00x |                - |
+| **Option A (Dual Fsync: Raft WAL + LSM WAL)**     |                           662 |             21,390.8 |                       80,720 |     1.00x |              401 |
+| **Option B (Single Fsync: `FlushedIndex` Fence)** |            **1,300 (+96.4%)** | **9,118.2 (-57.4%)** |         **119,046 (+47.5%)** | **1.00x** | **201 (-49.9%)** |
+
+---
+
+## Standalone Developer Tools (`aether_check` & `detlint`)
+
+Two tools inside AetherKV work standalone on external Go repositories and distributed-system test histories:
+
+### 1. Drop-In Linearizability & Multi-Key `SCAN` Checker (`cmd/aether_check`)
+
+Feed any JSON-Lines client history containing `PUT`, `GET`, `DELETE`, `CAS`, or multi-key `SCAN` operations (with optional indeterminate timeouts where `return_ns: 0`) to verify linearizability and automatically shrink failing histories down to minimal conflicting operations:
+
+```json
+{"id":1,"client_id":1,"kind":"PUT","key":"k1","input_val":"v1","invoke_ns":10,"return_ns":20}
+{"id":2,"client_id":2,"kind":"GET","key":"k1","output_val":"v1","invoke_ns":25,"return_ns":30}
+{"id":3,"client_id":2,"kind":"SCAN","key":"k1","end_key":"k9","scan_out":"k1=v1","invoke_ns":35,"return_ns":40}
+```
+
+```bash
+cd atherKV
+go run ./cmd/aether_check -in path/to/history.jsonl
+```
+
+### 2. Static Determinism Linter (`cmd/detlint`)
+
+Run `detlint` against any Go package paths in your own deterministic-simulation codebase to catch forbidden goroutines, `time.*` reads, global RNG imports, or unordered `range map` loops before they enter CI:
+
+```bash
+cd atherKV
+go run ./cmd/detlint path/to/pkg1 path/to/pkg2
+```
+
+---
 
 ## The 17-Entry Reproducible Bug Zoo
 
-| Bug ID | Subsystem    | Planted Bug                | Detector            | Seed / Shrink    |
-| :----- | :----------- | :------------------------- | :------------------ | :--------------- |
-| #1     | Raft Core    | Fig. 8 earlier-term commit | StateMachineSafety  | Seed 1           |
-| #2     | Raft + VFS   | Vote reply before persist  | TermMonotonicity    | Seed 1           |
-| #3     | Raft + WAL   | Ack Append before fsync    | CommittedDurability | Seed 1           |
-| #4     | Raft Core    | Stale Append log truncate  | CommittedDurability | Seed 4           |
-| #5     | KV + Raft    | Blind leader read          | Porcupine           | Seed 5 (2 ops)   |
-| #6     | KV + Clock   | Lease read under skew      | Porcupine           | Seed 606 (2 ops) |
-| #7     | KV Session   | No client session dedup    | Porcupine           | Seed 707 (2 ops) |
-| #8     | LSM WAL      | Accept torn WAL tail       | CrashSyncOracle     | Seed 8           |
-| #9     | LSM + VFS    | Missing MANIFEST SyncDir   | SimFSCrashOracle    | Seed 9           |
-| #10    | LSM Compact  | Early tombstone drop       | ModelBasedOracle    | Seed 10          |
-| #11    | Raft + LSM   | Truncate past FlushedIndex | CrashRecoveryOracle | Seed 1111        |
-| #12    | KV Snapshot  | Snapshot omits dedup table | Porcupine           | Seed 1212 (1 op) |
-| #13    | Raft Core    | Even-cluster quorum bug    | CommittedDurability | Seed 4 (20 to 2) |
-| #14    | KV + LSM     | Split data & appliedIndex  | CrashEnumeration    | Seed 1           |
-| #15    | WiscKey VLog | Pointer synced before VLog | CrashSyncOracle     | Seed 1           |
-| #16    | WiscKey VLog | VLog GC drops live value   | ModelBasedOracle    | Seed 16          |
-| #17    | WiscKey VLog | Accept torn VLog tail      | CrashSyncOracle     | Seed 17          |
+Every entry below toggles a real consensus, storage, or durability bug via `raft.BugConfig`, `lsm.LSMBugConfig`, or `kv.KVBugConfig` to verify detector sensitivity within 1–4 seeds (full postmortems in [`atherKV/docs/bug-zoo/CATALOG.md`](atherKV/docs/bug-zoo/CATALOG.md)):
 
-Every planted bug in the table above can be toggled via `raft.BugConfig`, `lsm.LSMBugConfig`, or `kv.KVBugConfig` to validate that our invariant observers and linearizability checkers catch consensus and storage regressions within 1 to 4 seeds. On Bug Zoo #13 (even-cluster split-brain quorum), the fault-schedule shrinker automatically reduces a 20-fault nemesis schedule down to the 2 minimal faults required to trigger the violation.
+| Bug ID | Subsystem    | Planted Bug                  | Detector              | Seed / Shrink    |
+| :----- | :----------- | :--------------------------- | :-------------------- | :--------------- |
+| #1     | Raft Core    | Fig. 8 earlier-term commit   | `StateMachineSafety`  | Seed 1           |
+| #2     | Raft + VFS   | Vote reply before persist    | `TermMonotonicity`    | Seed 1           |
+| #3     | Raft + WAL   | Ack Append before `fsync`    | `CommittedDurability` | Seed 1           |
+| #4     | Raft Core    | Stale Append log truncate    | `CommittedDurability` | Seed 4           |
+| #5     | KV + Raft    | Blind leader read            | `Porcupine`           | Seed 5 (2 ops)   |
+| #6     | KV + Clock   | Lease read under clock skew  | `Porcupine`           | Seed 606 (2 ops) |
+| #7     | KV Session   | No client session dedup      | `Porcupine`           | Seed 707 (2 ops) |
+| #8     | LSM WAL      | Accept torn WAL tail         | `CrashSyncOracle`     | Seed 8           |
+| #9     | LSM + VFS    | Missing `MANIFEST` `SyncDir` | `SimFSCrashOracle`    | Seed 9           |
+| #10    | LSM Compact  | Early tombstone drop         | `ModelBasedOracle`    | Seed 10          |
+| #11    | Raft + LSM   | Truncate past `FlushedIndex` | `CrashRecoveryOracle` | Seed 1111        |
+| #12    | KV Snapshot  | Snapshot omits dedup table   | `Porcupine`           | Seed 1212 (1 op) |
+| #13    | Raft Core    | Even-cluster quorum bug      | `CommittedDurability` | Seed 4 (20 → 3)  |
+| #14    | KV + LSM     | Split data & `appliedIndex`  | `CrashEnumeration`    | Seed 1           |
+| #15    | WiscKey VLog | Pointer synced before VLog   | `CrashSyncOracle`     | Seed 1           |
+| #16    | WiscKey VLog | VLog GC drops live value     | `ModelBasedOracle`    | Seed 16          |
+| #17    | WiscKey VLog | Accept torn VLog tail        | `CrashSyncOracle`     | Seed 17          |
 
 ## Seven Real, Unplanted Bugs Caught by the Simulator
 
-While the 17 Bug Zoo entries measure detector sensitivity, the simulator and crash models also uncovered 7 genuine, unplanted implementation bugs during development:
+1. **Raft Section 6.4 `ReadIndex` Uncommitted Prefix Bug (Seed 10):** A newly elected leader with uncommitted earlier-term entries served `ReadIndex` at `commitIdx = 0` before committing a current-term no-op entry (caught by Porcupine).
+2. **Unverified `commitIdx` Advance on `MsgHeartbeat` (Seed 12):** `handleHeartbeat` advanced a follower's `commitIdx` without `(prevLogIndex, prevLogTerm)` verification, letting a deposed Term 1 leader commit an overwritten entry (caught by `StateMachineSafety`).
+3. **Torn WAL Header Unbounded Allocation OOM:** A 512B sector torn with `0xAA` bytes caused `SegmentedWAL` to pass `length = 0xAAAAAAAA` (2.86 GB) to `make([]byte, length)` before bounds validation.
+4. **Zombie LSM WAL Replay After Unsynced Truncation (Step 500 Crash):** Resetting `active.wal` after `Flush()` without syncing let pre-flush WAL sectors (`seq = 499`) survive crash and shadow newer $L_0$ SSTable state (`seq = 500`).
+5. **`SimFS` Sub-Sector Tear Bleed:** Sector-granular crash tearing initially overwrote full 512B boundaries rather than clamping to the unsynced write sub-range, corrupting previously synced records sharing the same sector.
+6. **`SegmentedWAL.TruncateSuffix` Resurrection Bug:** Suffix truncation cleared the in-memory index map without truncating the underlying `SimFS` segment file, resurrecting overwritten entries on reboot.
+7. **`SimFS.WriteAt` Quadratic Slice Reallocation:** Exact-sized slice allocations on every 32 KiB append triggered 4.2 GB of allocations across 512 appends on 2 MiB blocks until replaced with geometric capacity doubling.
 
-1. **Raft Section 6.4 `ReadIndex` Uncommitted Prefix Bug (Seed 10):** A newly elected leader with uncommitted earlier-term entries served `ReadIndex` at `commitIdx = 0` before committing a current-term no-op entry, caught by Porcupine.
-2. **Unverified `commitIdx` Advance on `MsgHeartbeat` (Seed 12):** `handleHeartbeat` advanced a follower's `commitIdx` without `prevLogIndex`/`prevLogTerm` checks, causing a deposed Term 1 leader to commit an overwritten entry, caught by `StateMachineSafety`.
-3. **Torn WAL Header Unbounded Allocation OOM:** When `SimFS` tore a 512B sector in `SegmentedWAL` with `0xAA` bytes, the corrupted length field (`0xAAAAAAAA` = 2.86 GB) was passed to `make([]byte, length)` before checking file bounds.
-4. **Zombie LSM WAL Replay After Unsynced Truncation (Step 500 Crash):** Resetting `active.wal` after `Flush()` without calling `Sync()` allowed pre-flush WAL sectors (`seq = 499`) to survive a crash and shadow newer $L_0$ SSTable entries (`seq = 500`).
-5. **`SimFS` Sub-Sector Tear Bleed:** Sector-granular crash tearing initially overwrote `secOff` rather than clamping to the unsynced write sub-range `[max(secOff, w.off), min(secEnd, w.off+w.len))`, corrupting previously synced records in the same sector.
-6. **`SegmentedWAL.TruncateSuffix` Resurrection Bug:** Suffix truncation removed entries from the in-memory index map without truncating the underlying `SimFS` segment file, causing overwritten uncommitted entries to resurrect on restart.
-7. **`SimFS.WriteAt` Quadratic Slice Reallocation:** Allocating exact-sized slices (`len == cap`) on every 32 KiB WAL append caused 4.2 GB of allocations across 512 appends on the 2 MiB benchmark until fixed with geometric capacity doubling.
+---
 
 ## Repository Layout
 
 ```text
-aetherkv/
-├── go.mod                                  # Module [github.com/cutaret/aetherkv](https://github.com/cutaret/aetherkv) (zero external deps)
-├── README.md                               # Project architecture, verification record & quickstart
-├── cmd/
-│   ├── detlint/main.go                     # Static AST/type determinism linter CLI
-│   ├── aether-check/main.go                # Standalone JSONL linearizability & range-scan checker CLI
-│   ├── simrun/main.go                      # Deterministic seed replay, shrinker & HTML trace CLI
-│   └── benchrun/main.go                    # 5-run reproducible benchmark runner (JSON & CSV export)
-├── internal/
-│   └── detlint/analyzer.go                 # AST + go/types analyzer forbidding goroutines/time/rand/maps
-├── sim/
-│   ├── interfaces.go                       # Clock, Rand, Scheduler, Transport & Message contracts
-│   ├── prng.go                             # StreamRand (xoshiro256** seeded via SHA-256)
-│   ├── clock.go                            # BaseClock & NodeClock (static offset + PPM linear drift)
-│   ├── trace.go                            # Structured JSONL trace logger & rolling SHA-256 chain hash
-│   ├── kernel.go                           # Single-threaded min-heap discrete-event simulation kernel
-│   ├── net.go                              # SimNet fault matrix, Nemesis generator & fault shrinker
-│   ├── htmlviewer.go                       # Zero-dependency dark-mode HTML trace timeline generator
-│   └── sanity_test.go                      # Stage S0 10,000-seed x 2 trace-hash determinism suite
-├── vfs/
-│   ├── vfs.go                              # FS & File interfaces + production OSFS implementation
-│   ├── simfs.go                            # Crashable SimFS (volatile/durable buffers & 512B tearing)
-│   └── simfs_test.go                       # Unsynced metadata rollback & sector-tearing unit tests
-├── statemachine/
-│   ├── statemachine.go                     # StateMachine interface (ApplyBatch, Get, Scan, Snapshot)
-│   └── memstore.go                         # Reference in-memory sorted store + session deduplication
-├── raft/
-│   ├── types.go                            # Role, MessageType, Entry, HardState, Ready & BugConfig
-│   ├── node.go                             # Pure zero-I/O Raft state machine + ReadIndex + snapshots
-│   ├── observer.go                         # Step-by-step global checker for all 6 Raft invariants
-│   └── wal/
-│       ├── wal.go                          # Segmented CRC32C Raft WAL with torn-tail recovery
-│       └── wal_test.go                     # Append, recovery & torn-sector truncation unit tests
-├── lsm/
-│   ├── format.go                           # InternalKey, WriteBatch, VLogPointer & MergingIterator
-│   ├── wal.go                              # 32 KiB block-fragmented LSM WAL + group commit
-│   ├── memtable.go                         # Deterministic skiplist ordered by (UserKey ASC, Seq DESC)
-│   ├── bloom.go                            # Double-hashing Bloom filter builder and probe
-│   ├── sstable.go                          # 4 KiB block SSTable writer/reader + per-block CRC32C
-│   ├── manifest.go                         # VersionEdit log + atomic CURRENT rename + SyncDir
-│   ├── vlog.go                             # WiscKey append-only ValueLog + online segment GC
-│   ├── db.go                               # Crash-safe LSMStore, leveled compaction & Option A/B
-│   ├── s2_part1_test.go                    # WAL, Skiplist, Bloom, SSTable & Bug Zoo #8 tests
-│   ├── s2_part2_test.go                    # Bug Zoo #9, #10, #14 + 5,000-op differential crash test
-│   └── s2b_vlog_test.go                    # Bug Zoo #15-#17 + Llama-3-8B KV-cache benchmark sweep
-├── kv/
-│   └── service.go                          # Replicated KV service binding Raft, LSMStore & leases
-├── transport/
-│   └── tcp/tcp.go                          # Real length-prefixed TCP socket transport (127.0.0.1)
-├── adapters/
-│   ├── porcupine/
-│   │   ├── checker.go                      # Wing & Gong + Lowe bitmask checker & SCAN verifier
-│   │   └── s4_checker_test.go              # 1,000-history differential test & shrinker suite
-│   └── etcdcontrol/adapter.go              # Clean control cluster configuration
-├── zoo/
-│   ├── harness.go                          # Multi-node cluster simulation runner & workload driver
-│   ├── zoo_s1_test.go                      # 150-run control campaign + Bug Zoo #1-#7 & #13
-│   └── s3_integration_test.go              # Full-stack chaos, Bug Zoo #11-#12, Option A/B & TCP tests
-├── bench/
-│   └── results/                            # Raw JSON and CSV benchmark artifacts from benchrun
-└── docs/
-    ├── METRICS.md                          # Complete empirical telemetry & verification ledger
-    ├── trace_zoo13.html                    # Generated interactive HTML trace viewer for Bug Zoo #13
-    ├── bug-zoo/CATALOG.md                  # Detailed postmortem catalog for all 17 Bug Zoo entries
-    └── adr/                                # Architecture Decision Records (ADR 001 - ADR 007)
-```
-
-## CLI Toolchain & One-Command Reproduction
-
-Run all commands below from your repository root in PowerShell or any POSIX shell:
-
-```powershell
-# 1. Run the static determinism linter across all core state-machine packages
-go run ./cmd/detlint statemachine raft lsm kv
-
-# 2. Run the complete verification test suite sequentially (Stages S0 through S4 + all 17 Bug Zoo tests)
-go test -p 1 -v ./... -count=1
-
-# 3. Replay Bug Zoo #13 (4-node split-brain), shrink the 20-fault schedule to 2 faults, and export HTML trace
-go run ./cmd/simrun -seed 4 -nodes 4 -bug 13 -html docs/trace_zoo13.html
-
-# 4. Run the standalone linearizability checker CLI on a recorded JSONL client history
-go run ./cmd/aether-check -in path/to/history.jsonl
-
-# 5. Reproduce the 5-run benchmark suite and export bench/results/latest_benchmarks.{json,csv}
-go run ./cmd/benchrun -runs 5 -out bench/results
+AtherKV/
+├── .github/workflows/
+│   ├── ci.yml                               # detlint + race detector + S0-S4 & 17-Bug Zoo CI
+│   ├── bench-linux.yml                      # Linux NVMe OSFS/SimFS & Pebble v1.1.5 benchmarks
+│   └── record-demo.yml                      # Automated VHS terminal demo recorder
+├── docs/trace_zoo13.html                    # GitHub Pages live interactive Bug Zoo #13 trace
+├── Dockerfile                               # ~12 MB static container for aether-server playground
+├── Makefile                                 # One-command lint, test, race, fuzz, sim, and bench
+└── atherKV/
+    ├── go.mod                               # Module [github.com/cutaret/aetherkv](https://github.com/cutaret/aetherkv) (0 external deps)
+    ├── cmd/
+    │   ├── detlint/main.go                  # Static AST/type determinism linter CLI
+    │   ├── aether_check/main.go             # Standalone JSONL linearizability & SCAN checker CLI
+    │   ├── simrun/main.go                   # Deterministic seed replay, shrinker & HTML trace CLI
+    │   ├── benchrun/main.go                 # 5-run OSFS/SimFS benchmark runner (JSON/CSV/MD)
+    │   └── aether-server/main.go            # Interactive 3-tab Raft+LSM+BugZoo web playground
+    ├── internal/detlint/analyzer.go         # AST + go/types determinism rules
+    ├── sim/                                 # Min-heap kernel, StreamRand, NodeClock, SimNet, HTML viewer
+    ├── vfs/                                 # POSIX OSFS + 512B sector-tearing SimFS
+    ├── statemachine/                        # StateMachine interface + MemStore reference oracle
+    ├── raft/                                # Pure zero-I/O Raft, 6-invariant observer & segmented WAL
+    ├── lsm/                                 # 32K WAL, skiplist, Bloom, SSTable, MANIFEST, WiscKey VLog
+    ├── kv/service.go                        # Replicated KV service, ReadIndex, leases & Option A/B
+    ├── transport/tcp/tcp.go                 # 4B Big-Endian length-prefixed TCP transport
+    ├── adapters/porcupine/                  # Wing & Gong + Lowe bitmask & multi-key SCAN checker
+    ├── zoo/                                 # Multi-node simulation harness & 17-entry Bug Zoo suite
+    ├── bench/
+    │   ├── pebble_compare/                  # Isolated Pebble v1.1.5 baseline submodule
+    │   └── results/                         # Raw Linux NVMe JSON, CSV, MD & hardware artifacts
+    └── docs/
+        ├── WIRE_FORMAT.md                   # Exact byte layouts for Raft WAL, LSM, SSTable & VLog
+        ├── METRICS.md                       # Complete empirical telemetry & verification ledger
+        ├── bug-zoo/CATALOG.md               # Detailed postmortems for all 17 Bug Zoo entries
+        ├── adr/                             # Architecture Decision Records (ADR 001 – ADR 007)
+        └── assets/                          # architecture.svg, demo.tape, demo.gif
 ```
 
 ## Scope Boundaries & Honest Engineering Limits
 
-- **Explicit Non-Goals:** AetherKV intentionally omits multi-Raft range sharding, distributed cross-shard transactions (2PC/Percolator), SQL query parsing, TLS/RBAC authentication, block compression, and non-leveled compaction strategies.
-- **Simulation vs. Physical Hardware:** `SimFS` models 512-byte sector tearing and unsynced directory entry rollback based on POSIX/NVMe persistence contracts, while real-mode TCP tests verify OS socket framing; neither replaces physical power-cut testing on raw NVMe controller firmware.
+- **Explicit Non-Goals:** AetherKV intentionally omits multi-Raft range sharding, distributed cross-shard transactions (2PC/Percolator), SQL parsing, TLS/RBAC authentication, and block compression.
+- **Simulation vs. Physical Hardware:** `SimFS` models 512-byte sector tearing and unsynced directory-entry rollback based on POSIX/NVMe persistence contracts, while Linux `OSFS` and real TCP tests exercise OS syscalls and sockets; neither replaces physical power-cut testing on raw NVMe controller firmware.
