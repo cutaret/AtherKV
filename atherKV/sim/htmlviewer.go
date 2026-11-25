@@ -1,9 +1,10 @@
 package sim
 
 import (
-	"fmt"
+	"encoding/json"
 	"html"
 	"io"
+	"strings"
 )
 
 // TraceReport bundles a simulation seed's metadata, fault schedule, and trace events for HTML rendering.
@@ -19,83 +20,1178 @@ type TraceReport struct {
 	Events            []TraceEvent
 }
 
-// RenderHTMLTraceViewer writes a self-contained, zero-dependency interactive HTML trace viewer.
+type htmlFaultPayload struct {
+	ID      int     `json:"id"`
+	TimeMs  float64 `json:"time_ms"`
+	Type    string  `json:"type"`
+	TargetA string  `json:"target_a"`
+	TargetB string  `json:"target_b"`
+}
+
+type htmlEventPayload struct {
+	Seq     uint64  `json:"seq"`
+	TimeMs  float64 `json:"time_ms"`
+	Node    string  `json:"node"`
+	Kind    string  `json:"kind"`
+	Details string  `json:"details"`
+}
+
+type htmlTracePayload struct {
+	Title             string             `json:"title"`
+	Seed              uint64             `json:"seed"`
+	NumNodes          int                `json:"num_nodes"`
+	Detector          string             `json:"detector"`
+	ViolationDetails  string             `json:"violation_details"`
+	InitialFaultCount int                `json:"initial_fault_count"`
+	ShrunkFaultCount  int                `json:"shrunk_fault_count"`
+	Faults            []htmlFaultPayload `json:"faults"`
+	Events            []htmlEventPayload `json:"events"`
+}
+
+// RenderHTMLTraceViewer writes a self-contained, zero-dependency interactive HTML trace inspector.
 func RenderHTMLTraceViewer(w io.Writer, rep TraceReport) error {
-	_, err := fmt.Fprintf(w, `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>AetherKV Trace Viewer — %s (Seed %d)</title>
-<style>
-  body { background: #0d1117; color: #c9d1d9; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; margin: 24px; }
-  h1, h2 { color: #58a6ff; margin-bottom: 8px; }
-  .banner { background: #3d161b; border: 1px solid #f85149; padding: 14px; border-radius: 6px; margin-bottom: 20px; }
-  .banner strong { color: #ff7b72; }
-  .stats { display: flex; gap: 16px; margin-bottom: 20px; }
-  .card { background: #161b22; border: 1px solid #30363d; padding: 12px 16px; border-radius: 6px; }
-  table { width: 100%%; border-collapse: collapse; background: #161b22; border: 1px solid #30363d; margin-bottom: 24px; font-size: 13px; }
-  th, td { padding: 8px 12px; border-bottom: 1px solid #21262d; text-align: left; }
-  th { background: #21262d; color: #79c0ff; }
-  .badge-fault { background: #6e40c9; color: #fff; padding: 2px 6px; border-radius: 4px; }
-  .badge-drop { background: #9e6a03; color: #fff; padding: 2px 6px; border-radius: 4px; }
-  .badge-exec { background: #238636; color: #fff; padding: 2px 6px; border-radius: 4px; }
-</style>
-</head>
-<body>
-<h1>AetherKV Deterministic Simulation Trace Viewer</h1>
-<div class="banner">
-  <div><strong>Title:</strong> %s</div>
-  <div><strong>Firing Detector:</strong> %s</div>
-  <div><strong>Violation Explanation:</strong> %s</div>
-</div>
-<div class="stats">
-  <div class="card"><strong>Master Seed:</strong> %d</div>
-  <div class="card"><strong>Cluster Size:</strong> %d Nodes</div>
-  <div class="card"><strong>Schedule Shrinking:</strong> %d &rarr; %d Minimal Faults</div>
-  <div class="card"><strong>Recorded Events:</strong> %d</div>
-</div>
-<h2>Shrunk Minimal Nemesis Fault Schedule</h2>
-<table>
-  <thead><tr><th>Fault ID</th><th>Virtual Time (ms)</th><th>Fault Type</th><th>Target A</th><th>Target B</th></tr></thead>
-  <tbody>
-`,
-		html.EscapeString(rep.Title), rep.Seed,
-		html.EscapeString(rep.Title),
-		html.EscapeString(rep.Detector),
-		html.EscapeString(rep.ViolationDetails),
-		rep.Seed, rep.NumNodes, rep.InitialFaultCount, rep.ShrunkFaultCount, len(rep.Events))
-	if err != nil {
-		return err
+	payload := htmlTracePayload{
+		Title:             rep.Title,
+		Seed:              rep.Seed,
+		NumNodes:          rep.NumNodes,
+		Detector:          rep.Detector,
+		ViolationDetails:  rep.ViolationDetails,
+		InitialFaultCount: rep.InitialFaultCount,
+		ShrunkFaultCount:  rep.ShrunkFaultCount,
+		Faults:            make([]htmlFaultPayload, 0, len(rep.Faults)),
+		Events:            make([]htmlEventPayload, 0, min(len(rep.Events), 400)),
 	}
 
 	for _, f := range rep.Faults {
-		_, _ = fmt.Fprintf(w, "    <tr><td>#%d</td><td>%.3f ms</td><td><span class=\"badge-fault\">%s</span></td><td>%s</td><td>%s</td></tr>\n",
-			f.ID, float64(f.TimeNs)/1e6, html.EscapeString(string(f.Type)), html.EscapeString(f.TargetA), html.EscapeString(f.TargetB))
+		payload.Faults = append(payload.Faults, htmlFaultPayload{
+			ID:      f.ID,
+			TimeMs:  float64(f.TimeNs) / 1e6,
+			Type:    string(f.Type),
+			TargetA: f.TargetA,
+			TargetB: f.TargetB,
+		})
 	}
 
-	_, _ = fmt.Fprintf(w, `  </tbody>
-</table>
-<h2>Step-by-Step Event Timeline</h2>
-<table>
-  <thead><tr><th>Seq #</th><th>Virtual Time (ms)</th><th>Node</th><th>Event Kind</th><th>Details</th></tr></thead>
-  <tbody>
-`)
-
-	maxEvents := min(len(rep.Events), 250)
+	maxEvents := min(len(rep.Events), 400)
 	for i := 0; i < maxEvents; i++ {
 		ev := rep.Events[i]
-		badge := "badge-exec"
-		if len(ev.Kind) >= 8 && ev.Kind[:8] == "net_drop" {
-			badge = "badge-drop"
-		}
-		_, _ = fmt.Fprintf(w, "    <tr><td>%d</td><td>%.3f ms</td><td>%s</td><td><span class=\"%s\">%s</span></td><td>%s</td></tr>\n",
-			ev.Seq, float64(ev.TimeNs)/1e6, html.EscapeString(ev.Node), badge, html.EscapeString(ev.Kind), html.EscapeString(ev.Details))
+		payload.Events = append(payload.Events, htmlEventPayload{
+			Seq:     ev.Seq,
+			TimeMs:  float64(ev.TimeNs) / 1e6,
+			Node:    ev.Node,
+			Kind:    ev.Kind,
+			Details: ev.Details,
+		})
 	}
 
-	_, err = fmt.Fprintf(w, `  </tbody>
-</table>
-</body>
-</html>
-`)
+	rawJSON, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	safeJSON := strings.ReplaceAll(string(rawJSON), "</", "<\\/")
+
+	page := strings.Replace(traceViewerTemplate, "__PAGE_TITLE__", html.EscapeString(rep.Title), 1)
+	page = strings.Replace(page, "__TRACE_JSON__", safeJSON, 1)
+
+	_, err = io.WriteString(w, page)
 	return err
 }
+
+const traceViewerTemplate = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AetherKV Trace Inspector &mdash; __PAGE_TITLE__</title>
+<style>
+  :root {
+    --canvas: #F8FAFC;
+    --surface: #FFFFFF;
+    --subtle: #F1F5F9;
+    --line: #E2E8F0;
+    --line-strong: #CBD5E1;
+    --ink: #0F172A;
+    --ink-2: #334155;
+    --muted: #64748B;
+    --blue: #0057FF;
+    --blue-soft: #EFF6FF;
+    --blue-mid: #0095FF;
+    --orange: #F25C05;
+    --orange-soft: #FFF7ED;
+    --orange-border: #FDBA74;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Top Hairline Accent */
+  .top-rule {
+    height: 3px;
+    background: linear-gradient(90deg, #0048FF 0%, #0095FF 55%, #F25C05 100%);
+  }
+
+  .shell {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 28px 40px;
+  }
+
+  /* Editorial Telemetry Header (No Box Cards) */
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 24px 0 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .crumb {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .crumb-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--orange);
+    display: inline-block;
+  }
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .telemetry {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .metric {
+    padding: 0 18px;
+    border-left: 1px solid var(--line);
+  }
+  .metric:first-child { border-left: none; padding-left: 0; }
+  .metric-k {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .metric-v {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .metric-v.accent-orange { color: var(--orange); }
+  .metric-v.accent-blue { color: var(--blue); }
+
+  /* Violation Strip */
+  .violation-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    margin: 18px 0 22px;
+    background: var(--orange-soft);
+    border-left: 3px solid var(--orange);
+    border-radius: 0 8px 8px 0;
+  }
+  .violation-text {
+    font-size: 13.5px;
+    color: var(--ink);
+    line-height: 1.45;
+  }
+  .violation-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--orange);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 10px;
+  }
+  .repro-btn {
+    background: var(--surface);
+    color: var(--ink-2);
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .repro-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  /* Split Main Workspace */
+  .workspace {
+    display: grid;
+    grid-template-columns: 1.18fr 0.82fr;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .workspace { grid-template-columns: 1fr; }
+  }
+
+  /* Left Stage: Topology & Scrubber */
+  .stage-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    font-size: 11.5px;
+    color: var(--muted);
+    align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .swatch-ok { width: 16px; height: 2px; background: #94A3B8; }
+  .swatch-cut { width: 16px; height: 0; border-top: 2px dashed var(--orange); }
+  .swatch-asym { width: 16px; height: 0; border-top: 2px dotted var(--blue-mid); }
+
+  .canvas-frame {
+    background-color: var(--surface);
+    background-image: radial-gradient(#CBD5E1 1px, transparent 1px);
+    background-size: 20px 20px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  #topologySvg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Active Step Callout inside Canvas Footer */
+  .canvas-caption {
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .caption-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .caption-desc {
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.45;
+  }
+  .caption-time {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--blue);
+    background: var(--blue-soft);
+    padding: 4px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Time Scrubber Controls */
+  .scrubber {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .scrubber-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .btn-group { display: flex; gap: 6px; }
+  .ctrl-btn {
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line-strong);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.14s ease;
+  }
+  .ctrl-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .ctrl-btn.primary {
+    background: var(--blue);
+    color: #FFFFFF;
+    border-color: var(--blue);
+  }
+  .ctrl-btn.primary:hover { background: #0045CC; color: #FFFFFF; }
+  .kbd-hint {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Proportional Virtual-Time Track */
+  .track-wrap {
+    position: relative;
+    padding: 12px 10px 26px;
+  }
+  .track-rail {
+    position: relative;
+    height: 3px;
+    background: var(--line-strong);
+    border-radius: 3px;
+  }
+  .track-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--orange));
+    border-radius: 3px;
+    transition: width 0.2s ease;
+  }
+  .track-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2.5px solid var(--muted);
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    padding: 0;
+  }
+  .track-dot:hover { transform: translate(-50%, -50%) scale(1.25); }
+  .track-dot.passed { border-color: var(--blue); background: var(--blue); }
+  .track-dot.fault.passed { border-color: var(--orange); background: var(--orange); }
+  .track-dot.active {
+    transform: translate(-50%, -50%) scale(1.35);
+    box-shadow: 0 0 0 4px rgba(0, 87, 255, 0.16);
+  }
+  .track-dot.fault.active {
+    box-shadow: 0 0 0 4px rgba(242, 92, 5, 0.2);
+  }
+  .track-tick-label {
+    position: absolute;
+    top: 16px;
+    transform: translateX(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* Right Stage: Timeline & Inspector */
+  .tabs {
+    display: flex;
+    gap: 20px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 14px;
+  }
+  .tab {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0 0 10px;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--blue);
+  }
+  .tab-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: 5px;
+  }
+
+  /* Vertical Step List */
+  .timeline {
+    position: relative;
+    padding-left: 22px;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 10px;
+    bottom: 10px;
+    width: 1.5px;
+    background: var(--line);
+  }
+  .step-item {
+    position: relative;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+  }
+  .step-item:hover {
+    background: var(--surface);
+    border-color: var(--line);
+  }
+  .step-item.active {
+    background: var(--surface);
+    border-color: var(--line-strong);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  }
+  .step-node {
+    position: absolute;
+    left: -20px;
+    top: 17px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--line-strong);
+  }
+  .step-item.is-init .step-node { border-color: var(--blue); }
+  .step-item.is-fault .step-node { border-color: var(--orange); }
+  .step-item.is-violation .step-node { border-color: var(--orange); background: var(--orange); }
+  .step-item.active .step-node {
+    background: var(--blue);
+    border-color: var(--blue);
+  }
+  .step-item.is-fault.active .step-node,
+  .step-item.is-violation.active .step-node {
+    background: var(--orange);
+    border-color: var(--orange);
+  }
+
+  .step-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .step-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .step-ms {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .step-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink-2);
+    flex-wrap: wrap;
+  }
+  .code-pill {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: var(--subtle);
+    color: var(--ink-2);
+  }
+  .code-pill.fault {
+    background: var(--orange-soft);
+    color: var(--orange);
+  }
+  .code-pill.blue {
+    background: var(--blue-soft);
+    color: var(--blue);
+  }
+
+  /* Partition Connectivity Matrix */
+  .reach-panel {
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .reach-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .reach-chip {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+  }
+  .reach-chip.severed {
+    border-color: var(--orange-border);
+    background: var(--orange-soft);
+    color: var(--orange);
+  }
+
+  /* Kernel Event Stream Tab */
+  .event-filters {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .filter-chip {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .filter-chip.active {
+    background: var(--ink);
+    color: #FFFFFF;
+    border-color: var(--ink);
+  }
+  .event-list {
+    max-height: 440px;
+    overflow-y: auto;
+    border-top: 1px solid var(--line);
+  }
+  .event-row {
+    display: grid;
+    grid-template-columns: 70px 52px 1fr;
+    gap: 10px;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    align-items: baseline;
+  }
+  .event-row .ev-t { font-family: var(--mono); color: var(--muted); font-size: 11px; }
+  .event-row .ev-n { font-family: var(--mono); font-weight: 700; color: var(--blue); font-size: 11.5px; }
+  .event-row .ev-d { color: var(--ink-2); word-break: break-word; }
+  .empty-state {
+    padding: 28px 18px;
+    border: 1px dashed var(--line-strong);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .empty-state code {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--subtle);
+    padding: 2px 5px;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div class="top-rule"></div>
+<div class="shell">
+  <header>
+    <div>
+      <div class="crumb"><span class="crumb-dot"></span>AetherKV / Deterministic Trace Inspector</div>
+      <h1 id="pageTitle"></h1>
+    </div>
+    <div class="telemetry">
+      <div class="metric">
+        <div class="metric-k">Master Seed</div>
+        <div class="metric-v accent-blue" id="mSeed"></div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">Cluster</div>
+        <div class="metric-v" id="mNodes"></div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">Delta Shrink</div>
+        <div class="metric-v accent-orange" id="mShrink"></div>
+      </div>
+      <div class="metric">
+        <div class="metric-k">Detector</div>
+        <div class="metric-v" id="mDetector"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="violation-strip">
+    <div class="violation-text">
+      <span class="violation-tag" id="vDetector"></span>
+      <span id="vDetails"></span>
+    </div>
+    <button class="repro-btn" id="copyReproBtn" onclick="copyRepro()">Copy CLI Repro</button>
+  </div>
+
+  <div class="workspace">
+    <!-- Left Column: Live Interactive Topology + Scrubber -->
+    <section>
+      <div class="stage-head">
+        <span class="section-label">Cluster Network Topology</span>
+        <div class="legend">
+          <span class="legend-item"><span class="swatch-ok"></span>Connected</span>
+          <span class="legend-item"><span class="swatch-cut"></span>Symmetric Cut</span>
+          <span class="legend-item"><span class="swatch-asym"></span>One-Way Drop</span>
+        </div>
+      </div>
+
+      <div class="canvas-frame">
+        <svg id="topologySvg" viewBox="0 0 560 350" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="canvas-caption">
+          <div>
+            <div class="caption-title" id="capTitle"></div>
+            <div class="caption-desc" id="capDesc"></div>
+          </div>
+          <span class="caption-time" id="capTime"></span>
+        </div>
+      </div>
+
+      <div class="scrubber">
+        <div class="scrubber-controls">
+          <div class="btn-group">
+            <button class="ctrl-btn primary" id="playBtn" onclick="togglePlay()">Play</button>
+            <button class="ctrl-btn" onclick="stepBy(-1)">&larr; Prev</button>
+            <button class="ctrl-btn" onclick="stepBy(1)">Next &rarr;</button>
+            <button class="ctrl-btn" onclick="selectStep(0)">Reset</button>
+          </div>
+          <span class="kbd-hint">Keys: &larr; / &rarr; step &middot; Space play</span>
+        </div>
+
+        <div class="track-wrap">
+          <div class="track-rail" id="trackRail">
+            <div class="track-fill" id="trackFill"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Interactive Fault Progression & Event Stream -->
+    <section>
+      <div class="tabs">
+        <button class="tab active" id="tabFaultsBtn" onclick="switchInspectorTab('faults')">
+          Fault Progression<span class="tab-count" id="faultCountTag"></span>
+        </button>
+        <button class="tab" id="tabEventsBtn" onclick="switchInspectorTab('events')">
+          Kernel Event Stream<span class="tab-count" id="eventCountTag"></span>
+        </button>
+      </div>
+
+      <div id="panelFaults">
+        <div class="timeline" id="timelineList"></div>
+        <div class="reach-panel">
+          <div class="section-label">Active Link Faults at Current Timestamp</div>
+          <div class="reach-grid" id="reachGrid"></div>
+        </div>
+      </div>
+
+      <div id="panelEvents" style="display:none">
+        <div class="event-filters" id="eventFilters"></div>
+        <div id="eventContainer"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const TRACE_DATA = __TRACE_JSON__;
+
+// Build ordered node IDs (n1..nN)
+const NODES = [];
+for (let i = 1; i <= Math.max(3, TRACE_DATA.num_nodes || 4); i++) {
+  NODES.push('n' + i);
+}
+
+// Compute balanced SVG positions for 3, 4, or N nodes
+function computeNodePositions(nodes) {
+  const pos = {};
+  if (nodes.length === 4) {
+    pos[nodes[0]] = { x: 145, y: 82 };
+    pos[nodes[1]] = { x: 415, y: 82 };
+    pos[nodes[2]] = { x: 415, y: 268 };
+    pos[nodes[3]] = { x: 145, y: 268 };
+    return pos;
+  }
+  if (nodes.length === 3) {
+    pos[nodes[0]] = { x: 280, y: 74 };
+    pos[nodes[1]] = { x: 135, y: 266 };
+    pos[nodes[2]] = { x: 425, y: 266 };
+    return pos;
+  }
+  const cx = 280, cy = 175, rx = 175, ry = 115;
+  nodes.forEach(function(id, idx) {
+    const angle = (-Math.PI / 2) + (2 * Math.PI * idx) / nodes.length;
+    pos[id] = { x: Math.round(cx + rx * Math.cos(angle)), y: Math.round(cy + ry * Math.sin(angle)) };
+  });
+  return pos;
+}
+const NODE_POS = computeNodePositions(NODES);
+
+function describeFault(f) {
+  const t = String(f.type || '').toLowerCase();
+  if (t.indexOf('sym') >= 0 && t.indexOf('asym') < 0) {
+    return 'Bidirectional network cut severs all RPCs between ' + f.target_a + ' and ' + f.target_b + '.';
+  }
+  if (t.indexOf('asym') >= 0) {
+    return 'Asymmetric one-way drop blocks packets from ' + f.target_a + ' to ' + f.target_b + ' while reverse traffic still flows.';
+  }
+  if (t.indexOf('crash') >= 0) {
+    return 'Simulated power loss wipes unsynced volatile RAM and tears unsynced 512B disk sectors on ' + f.target_a + '.';
+  }
+  if (t.indexOf('pause') >= 0) {
+    return 'Process pause freezes ' + f.target_a + ' while virtual clock time continues advancing.';
+  }
+  if (t.indexOf('heal') >= 0) {
+    return 'Network partition healed, restoring message delivery.';
+  }
+  return 'Nemesis injected fault ' + f.type + ' affecting ' + f.target_a + (f.target_b ? ' and ' + f.target_b : '') + '.';
+}
+
+// Assemble chronological replay steps
+const STEPS = [];
+STEPS.push({
+  kind: 'init',
+  timeMs: 0,
+  title: 'Cluster Bootstrapped',
+  badge: 'healthy',
+  desc: 'All ' + NODES.length + ' replicas (' + NODES.join(', ') + ') start online with full bidirectional connectivity.'
+});
+
+const faults = (TRACE_DATA.faults || []).slice().sort(function(a, b) { return a.time_ms - b.time_ms; });
+faults.forEach(function(f) {
+  STEPS.push({
+    kind: 'fault',
+    fault: f,
+    timeMs: f.time_ms,
+    title: 'Fault #' + f.id + ' &mdash; ' + f.target_a + (f.target_b ? ' / ' + f.target_b : ''),
+    rawTitle: 'Fault #' + f.id + ' (' + f.target_a + (f.target_b ? ' / ' + f.target_b : '') + ')',
+    badge: f.type,
+    desc: describeFault(f)
+  });
+});
+
+const maxFaultMs = faults.length > 0 ? faults[faults.length - 1].time_ms : 0;
+const violationMs = Math.round((maxFaultMs + Math.max(25, maxFaultMs * 0.14)) * 1000) / 1000;
+STEPS.push({
+  kind: 'violation',
+  timeMs: violationMs,
+  title: 'Safety Violation Caught',
+  badge: TRACE_DATA.detector || 'InvariantViolation',
+  desc: TRACE_DATA.violation_details || 'Global invariant observer detected a safety violation.'
+});
+
+let currentStep = STEPS.length - 1;
+let playTimer = null;
+let selectedEventNode = 'ALL';
+
+function computeNetworkState(stepIdx) {
+  const blocked = {};
+  const crashed = {};
+  NODES.forEach(function(a) {
+    blocked[a] = {};
+    crashed[a] = false;
+  });
+
+  for (let i = 1; i <= stepIdx; i++) {
+    const st = STEPS[i];
+    if (st.kind !== 'fault') continue;
+    const f = st.fault;
+    const t = String(f.type || '').toLowerCase();
+    const a = f.target_a, b = f.target_b;
+    if (t.indexOf('asym') >= 0) {
+      if (blocked[a] && b) blocked[a][b] = true;
+    } else if (t.indexOf('sym') >= 0 || t.indexOf('partition') >= 0) {
+      if (blocked[a] && b) blocked[a][b] = true;
+      if (blocked[b] && a) blocked[b][a] = true;
+    } else if (t.indexOf('crash') >= 0 || t.indexOf('pause') >= 0) {
+      if (a) crashed[a] = true;
+    } else if (t.indexOf('restart') >= 0 || t.indexOf('resume') >= 0) {
+      if (a) crashed[a] = false;
+    } else if (t.indexOf('heal') >= 0) {
+      if (a && b && blocked[a] && blocked[b]) {
+        blocked[a][b] = false;
+        blocked[b][a] = false;
+      } else {
+        NODES.forEach(function(u) { NODES.forEach(function(v) { blocked[u][v] = false; }); });
+      }
+    }
+  }
+  return { blocked: blocked, crashed: crashed };
+}
+
+function renderTopology(stepIdx) {
+  const svg = document.getElementById('topologySvg');
+  const state = computeNetworkState(stepIdx);
+  const activeStep = STEPS[stepIdx];
+  const activeFault = activeStep.kind === 'fault' ? activeStep.fault : null;
+
+  // Detect implicated node in violation text (e.g., "leader n3")
+  let implicatedNode = '';
+  if (activeStep.kind === 'violation') {
+    const m = String(TRACE_DATA.violation_details || '').match(/\bn\d+\b/i);
+    if (m) implicatedNode = m[0].toLowerCase();
+  }
+
+  let out = '';
+  out += '<defs>';
+  out += '<marker id="arr-orange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#F25C05"/></marker>';
+  out += '<marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#0095FF"/></marker>';
+  out += '<filter id="node-shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0F172A" flood-opacity="0.08"/></filter>';
+  out += '</defs>';
+
+  // Draw pairwise links
+  for (let i = 0; i < NODES.length; i++) {
+    for (let j = i + 1; j < NODES.length; j++) {
+      const u = NODES[i], v = NODES[j];
+      const p1 = NODE_POS[u], p2 = NODE_POS[v];
+      const uvBlocked = !!state.blocked[u][v];
+      const vuBlocked = !!state.blocked[v][u];
+      const isHighlighted = activeFault && (
+        (activeFault.target_a === u && activeFault.target_b === v) ||
+        (activeFault.target_a === v && activeFault.target_b === u)
+      );
+
+      // Offset badge along diagonal links so crossing diagonals never overlap at center
+      const isDiagonal = (p1.x !== p2.x && p1.y !== p2.y);
+      const frac = isDiagonal ? (i === 0 ? 0.36 : 0.64) : 0.5;
+      const mx = p1.x + (p2.x - p1.x) * frac;
+      const my = p1.y + (p2.y - p1.y) * frac;
+
+      if (!uvBlocked && !vuBlocked) {
+        out += '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y + '" stroke="#CBD5E1" stroke-width="1.6"/>';
+      } else if (uvBlocked && vuBlocked) {
+        if (isHighlighted) {
+          out += '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y + '" stroke="#FDBA74" stroke-width="9" stroke-linecap="round" opacity="0.45"/>';
+        }
+        out += '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y + '" stroke="#F25C05" stroke-width="2.2" stroke-dasharray="7 5"/>';
+        out += '<circle cx="' + mx + '" cy="' + my + '" r="10" fill="#FFFFFF" stroke="#F25C05" stroke-width="1.6"/>';
+        out += '<text x="' + mx + '" y="' + (my + 4) + '" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#F25C05">&times;</text>';
+      } else {
+        // Asymmetric one-way drop: draw subtle blue intact arc and dashed orange blocked arrow
+        const src = uvBlocked ? u : v;
+        const dst = uvBlocked ? v : u;
+        const ps = NODE_POS[src], pd = NODE_POS[dst];
+        const dx = pd.x - ps.x, dy = pd.y - ps.y;
+        const len = Math.max(1, Math.hypot(dx, dy));
+        const ux = dx / len, uy = dy / len;
+        const nx = -uy, ny = ux; // normal vector
+        const rPad = 32;
+
+        // Blocked curve (src -> dst) bowed +20px along normal
+        const sx1 = ps.x + ux * rPad, sy1 = ps.y + uy * rPad;
+        const ex1 = pd.x - ux * (rPad + 4), ey1 = pd.y - uy * (rPad + 4);
+        const cx1 = (ps.x + pd.x) / 2 + nx * 24;
+        const cy1 = (ps.y + pd.y) / 2 + ny * 24;
+
+        // Intact reverse curve (dst -> src) bowed -18px along normal
+        const sx2 = pd.x - ux * rPad, sy2 = pd.y - uy * rPad;
+        const ex2 = ps.x + ux * (rPad + 4), ey2 = ps.y + uy * (rPad + 4);
+        const cx2 = (ps.x + pd.x) / 2 - nx * 18;
+        const cy2 = (ps.y + pd.y) / 2 - ny * 18;
+
+        out += '<path d="M ' + sx2 + ' ' + sy2 + ' Q ' + cx2 + ' ' + cy2 + ' ' + ex2 + ' ' + ey2 + '" fill="none" stroke="#0095FF" stroke-width="1.4" stroke-dasharray="3 3" marker-end="url(#arr-blue)" opacity="0.75"/>';
+        if (isHighlighted) {
+          out += '<path d="M ' + sx1 + ' ' + sy1 + ' Q ' + cx1 + ' ' + cy1 + ' ' + ex1 + ' ' + ey1 + '" fill="none" stroke="#FDBA74" stroke-width="9" opacity="0.45"/>';
+        }
+        out += '<path d="M ' + sx1 + ' ' + sy1 + ' Q ' + cx1 + ' ' + cy1 + ' ' + ex1 + ' ' + ey1 + '" fill="none" stroke="#F25C05" stroke-width="2.2" stroke-dasharray="6 4" marker-end="url(#arr-orange)"/>';
+
+        const lx = (ps.x + pd.x) / 2 + nx * 28;
+        const ly = (ps.y + pd.y) / 2 + ny * 28;
+        out += '<rect x="' + (lx - 32) + '" y="' + (ly - 10) + '" width="64" height="18" rx="9" fill="#FFF7ED" stroke="#F25C05" stroke-width="1.1"/>';
+        out += '<text x="' + lx + '" y="' + (ly + 3) + '" text-anchor="middle" font-family="monospace" font-size="10" font-weight="700" fill="#F25C05">' + src + ' &#x219B; ' + dst + '</text>';
+      }
+    }
+  }
+
+  // Draw Replica Nodes
+  NODES.forEach(function(id) {
+    const p = NODE_POS[id];
+    const isCrashed = !!state.crashed[id];
+    const isImplicated = (id === implicatedNode);
+    const isFaultTarget = activeFault && (activeFault.target_a === id || activeFault.target_b === id);
+
+    // Count outbound intact peers
+    let reachable = 0;
+    NODES.forEach(function(other) {
+      if (other !== id && !state.blocked[id][other] && !state.crashed[other]) reachable++;
+    });
+
+    const stroke = isCrashed || isImplicated ? '#F25C05' : (isFaultTarget ? '#F25C05' : '#0057FF');
+    const fill = isCrashed ? '#FFF7ED' : '#FFFFFF';
+
+    if (isImplicated) {
+      out += '<circle cx="' + p.x + '" cy="' + p.y + '" r="38" fill="#FFF7ED" stroke="#F25C05" stroke-width="1.4" stroke-dasharray="4 4"/>';
+    }
+    out += '<g filter="url(#node-shadow)">';
+    out += '<circle cx="' + p.x + '" cy="' + p.y + '" r="28" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2"/>';
+    out += '</g>';
+    out += '<text x="' + p.x + '" y="' + (p.y + 1) + '" text-anchor="middle" font-family="monospace" font-size="14" font-weight="800" fill="#0F172A">' + id.toUpperCase() + '</text>';
+
+    const sub = isCrashed ? 'CRASHED' : (isImplicated ? 'STALE LDR' : (reachable + '/' + (NODES.length - 1) + ' peers'));
+    const subCol = (isCrashed || isImplicated) ? '#F25C05' : '#64748B';
+    out += '<text x="' + p.x + '" y="' + (p.y + 16) + '" text-anchor="middle" font-family="monospace" font-size="9.5" font-weight="600" fill="' + subCol + '">' + sub + '</text>';
+  });
+
+  svg.innerHTML = out;
+
+  // Update active caption
+  document.getElementById('capTitle').innerHTML = activeStep.title;
+  document.getElementById('capDesc').textContent = activeStep.desc;
+  document.getElementById('capTime').textContent = 't = ' + activeStep.timeMs.toFixed(3) + ' ms';
+
+  // Update active link fault chips
+  const reachGrid = document.getElementById('reachGrid');
+  const chips = [];
+  for (let i = 0; i < NODES.length; i++) {
+    for (let j = i + 1; j < NODES.length; j++) {
+      const u = NODES[i], v = NODES[j];
+      const uv = !!state.blocked[u][v];
+      const vu = !!state.blocked[v][u];
+      if (uv && vu) {
+        chips.push('<span class="reach-chip severed">' + u + ' &harr; ' + v + ' severed</span>');
+      } else if (uv) {
+        chips.push('<span class="reach-chip severed">' + u + ' &#x219B; ' + v + ' dropped</span>');
+      } else if (vu) {
+        chips.push('<span class="reach-chip severed">' + v + ' &#x219B; ' + u + ' dropped</span>');
+      }
+    }
+  }
+  if (chips.length === 0) {
+    reachGrid.innerHTML = '<span class="reach-chip">All ' + (NODES.length * (NODES.length - 1) / 2) + ' pairwise links healthy</span>';
+  } else {
+    reachGrid.innerHTML = chips.join('');
+  }
+}
+
+function renderScrubber() {
+  const rail = document.getElementById('trackRail');
+  const totalT = Math.max(1, STEPS[STEPS.length - 1].timeMs);
+
+  // Remove old dots/labels
+  rail.querySelectorAll('.track-dot, .track-tick-label').forEach(function(el) { el.remove(); });
+
+  STEPS.forEach(function(st, idx) {
+    const pct = (st.timeMs / totalT) * 100;
+    const dot = document.createElement('button');
+    dot.className = 'track-dot' +
+      (st.kind !== 'init' ? ' fault' : '') +
+      (idx <= currentStep ? ' passed' : '') +
+      (idx === currentStep ? ' active' : '');
+    dot.style.left = pct + '%';
+    dot.title = (st.rawTitle || st.title) + ' (' + st.timeMs.toFixed(1) + ' ms)';
+    dot.onclick = function() { stopPlay(); selectStep(idx); };
+    rail.appendChild(dot);
+
+    const lbl = document.createElement('div');
+    lbl.className = 'track-tick-label';
+    lbl.style.left = pct + '%';
+    lbl.textContent = idx === 0 ? '0 ms' : (idx === STEPS.length - 1 ? 'Violation' : st.timeMs.toFixed(0) + ' ms');
+    rail.appendChild(lbl);
+  });
+
+  const fillPct = (STEPS[currentStep].timeMs / totalT) * 100;
+  document.getElementById('trackFill').style.width = fillPct + '%';
+}
+
+function renderTimelineList() {
+  const list = document.getElementById('timelineList');
+  list.innerHTML = STEPS.map(function(st, idx) {
+    const cls = 'step-item is-' + st.kind + (idx === currentStep ? ' active' : '');
+    const pillClass = st.kind === 'init' ? 'code-pill blue' : 'code-pill fault';
+    return '<div class="' + cls + '" onclick="stopPlay(); selectStep(' + idx + ')">' +
+      '<span class="step-node"></span>' +
+      '<div class="step-top">' +
+        '<span class="step-title">' + st.title + '</span>' +
+        '<span class="step-ms">' + st.timeMs.toFixed(3) + ' ms</span>' +
+      '</div>' +
+      '<div class="step-meta">' +
+        '<span class="' + pillClass + '">' + st.badge + '</span>' +
+        '<span>' + st.desc + '</span>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderEventsPanel() {
+  const events = TRACE_DATA.events || [];
+  const filtersEl = document.getElementById('eventFilters');
+  const container = document.getElementById('eventContainer');
+
+  if (events.length === 0) {
+    filtersEl.innerHTML = '';
+    container.innerHTML = '<div class="empty-state">' +
+      '<strong>No per-packet kernel events attached to this static trace export.</strong><br>' +
+      'The shrunk nemesis fault schedule above contains the exact minimal trigger sequence for Seed #' + TRACE_DATA.seed + '. ' +
+      'Pass recorded kernel <code>TraceEvent</code> slices into <code>TraceReport.Events</code> to inspect individual RPC frames here.' +
+    '</div>';
+    return;
+  }
+
+  const filterNodes = ['ALL'].concat(NODES);
+  filtersEl.innerHTML = filterNodes.map(function(n) {
+    return '<button class="filter-chip' + (selectedEventNode === n ? ' active' : '') + '" onclick="setEventFilter(\'' + n + '\')">' + n + '</button>';
+  }).join('');
+
+  const filtered = events.filter(function(ev) {
+    return selectedEventNode === 'ALL' || ev.node === selectedEventNode;
+  });
+
+  container.innerHTML = '<div class="event-list">' + filtered.map(function(ev) {
+    return '<div class="event-row">' +
+      '<span class="ev-t">' + ev.time_ms.toFixed(2) + ' ms</span>' +
+      '<span class="ev-n">' + (ev.node || 'sys') + '</span>' +
+      '<span class="ev-d"><span class="code-pill">' + ev.kind + '</span> ' + escapeHtml(ev.details) + '</span>' +
+    '</div>';
+  }).join('') + '</div>';
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function setEventFilter(node) {
+  selectedEventNode = node;
+  renderEventsPanel();
+}
+
+function selectStep(idx) {
+  currentStep = Math.max(0, Math.min(STEPS.length - 1, idx));
+  renderTopology(currentStep);
+  renderScrubber();
+  renderTimelineList();
+}
+
+function stepBy(delta) {
+  stopPlay();
+  selectStep(currentStep + delta);
+}
+
+function stopPlay() {
+  if (playTimer) {
+    clearInterval(playTimer);
+    playTimer = null;
+    document.getElementById('playBtn').textContent = 'Play';
+  }
+}
+
+function togglePlay() {
+  if (playTimer) {
+    stopPlay();
+    return;
+  }
+  if (currentStep >= STEPS.length - 1) {
+    selectStep(0);
+  }
+  document.getElementById('playBtn').textContent = 'Pause';
+  playTimer = setInterval(function() {
+    if (currentStep >= STEPS.length - 1) {
+      stopPlay();
+      return;
+    }
+    selectStep(currentStep + 1);
+  }, 1250);
+}
+
+function switchInspectorTab(tab) {
+  document.getElementById('tabFaultsBtn').classList.toggle('active', tab === 'faults');
+  document.getElementById('tabEventsBtn').classList.toggle('active', tab === 'events');
+  document.getElementById('panelFaults').style.display = tab === 'faults' ? 'block' : 'none';
+  document.getElementById('panelEvents').style.display = tab === 'events' ? 'block' : 'none';
+}
+
+function copyRepro() {
+  const bugMatch = String(TRACE_DATA.title || '').match(/#(\d+)/);
+  const bugFlag = bugMatch ? (' -bug ' + bugMatch[1]) : '';
+  const cmd = 'go run ./cmd/simrun -seed ' + TRACE_DATA.seed + ' -nodes ' + TRACE_DATA.num_nodes + bugFlag;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(cmd);
+    const btn = document.getElementById('copyReproBtn');
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy CLI Repro'; }, 1500);
+  }
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'ArrowLeft') stepBy(-1);
+  else if (e.key === 'ArrowRight') stepBy(1);
+  else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+});
+
+// Hydrate header & initial state
+document.getElementById('pageTitle').textContent = TRACE_DATA.title || 'Deterministic Simulation Replay';
+document.getElementById('mSeed').textContent = '#' + TRACE_DATA.seed;
+document.getElementById('mNodes').textContent = TRACE_DATA.num_nodes + ' Replicas';
+document.getElementById('mShrink').textContent = TRACE_DATA.initial_fault_count + ' -> ' + TRACE_DATA.shrunk_fault_count + ' Faults';
+document.getElementById('mDetector').textContent = TRACE_DATA.detector || 'Pass';
+document.getElementById('vDetector').textContent = TRACE_DATA.detector || 'VIOLATION';
+document.getElementById('vDetails').textContent = TRACE_DATA.violation_details || '';
+document.getElementById('faultCountTag').textContent = '(' + STEPS.length + ')';
+document.getElementById('eventCountTag').textContent = '(' + (TRACE_DATA.events || []).length + ')';
+
+selectStep(STEPS.length - 1);
+renderEventsPanel();
+</script>
+</body>
+</html>
+`
