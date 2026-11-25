@@ -1,0 +1,59 @@
+name: Linux Benchmark Suite & Pebble Baseline
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+    paths:
+      - ".github/workflows/bench-linux.yml"
+      - "atherKV/cmd/benchrun/main.go"
+      - "atherKV/bench/pebble_compare/**"
+permissions:
+  contents: write
+jobs:
+  benchmark:
+    name: Run Linux OSFS, SimFS & Pebble Baselines
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: atherKV/go.mod
+      - name: Capture Linux hardware & filesystem specs
+        run: |
+          mkdir -p atherKV/bench/results
+          {
+            echo "=== Kernel ==="
+            uname -a
+            echo ""
+            echo "=== CPU ==="
+            lscpu | grep -E "Model name|CPU\(s\)|Thread|Core|Architecture" || true
+            echo ""
+            echo "=== Memory ==="
+            free -h
+            echo ""
+            echo "=== Filesystem (Working Dir) ==="
+            df -Th .
+            echo ""
+            echo "=== Block Devices ==="
+            lsblk -d -o NAME,MODEL,ROTA,SIZE || true
+          } | tee atherKV/bench/results/linux_hardware.txt
+      - name: Run AetherKV Linux OSFS benchmark suite (real POSIX fsync)
+        working-directory: atherKV
+        run: go run ./cmd/benchrun -fs os -runs 5 -out bench/results -prefix linux_osfs
+      - name: Run AetherKV Linux SimFS architectural benchmark suite
+        working-directory: atherKV
+        run: go run ./cmd/benchrun -fs sim -runs 5 -out bench/results -prefix linux_simfs
+      - name: Run CockroachDB Pebble v1.1.5 baseline comparison
+        working-directory: atherKV/bench/pebble_compare
+        run: |
+          go get github.com/cockroachdb/pebble@v1.1.5
+          go mod tidy
+          go run . -runs 5 -out ../results
+      - name: Commit verified Linux benchmark results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add atherKV/bench/results/linux_* atherKV/bench/pebble_compare/go.mod atherKV/bench/pebble_compare/go.sum
+          git diff --cached --quiet || (git commit -m "Record verified Linux OSFS, SimFS, and Pebble v1.1.5 benchmarks" && git push)
