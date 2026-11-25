@@ -1,0 +1,33 @@
+name: Record Demo GIF (VHS)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  record:
+    name: Render docs/assets/demo.gif
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: atherKV/go.mod
+      - name: Install VHS, ttyd, and ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg ttyd
+          go install github.com/charmbracelet/vhs@latest
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+      - name: Record terminal demo GIF
+        working-directory: atherKV
+        env:
+          VHS_NO_SANDBOX: "true"
+        run: vhs docs/assets/demo.tape
+      - name: Commit and push demo.gif
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add atherKV/docs/assets/demo.gif
+          git diff --cached --quiet || (git commit -m "Render terminal demo GIF via VHS" && git push)
