@@ -1,0 +1,46 @@
+name: Render 3D Cluster GIF & MP4
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "docs/3d.html"
+      - "scripts/render_3d.mjs"
+      - ".github/workflows/render-3d-gif.yml"
+permissions:
+  contents: write
+jobs:
+  render:
+    name: Headless WebGL Capture (Playwright + ffmpeg)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright Chromium & ffmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Render 3D GIF & MP4
+        run: node scripts/render_3d.mjs
+      - name: Upload rendered GIF & MP4 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: aetherkv-3d-media
+          path: |
+            docs/assets/aetherkv-3d.gif
+            docs/assets/aetherkv-3d.mp4
+      - name: Commit generated GIF & MP4 to docs/assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/assets/aetherkv-3d.gif docs/assets/aetherkv-3d.mp4
+          if ! git diff --cached --quiet; then
+            git commit -m "Update rendered 3D cluster GIF and MP4 [skip ci]"
+            git push
+          fi
