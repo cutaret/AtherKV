@@ -1,0 +1,12 @@
+FROM golang:1.23-alpine AS builder
+WORKDIR /src
+COPY atherKV/go.mod ./
+COPY atherKV/ ./
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/aetherkv ./cmd/aetherkv && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/aetherctl ./cmd/aetherctl
+FROM scratch
+COPY --from=builder /out/aetherkv /aetherkv
+COPY --from=builder /out/aetherctl /aetherctl
+EXPOSE 8080 6379 9001
+HEALTHCHECK --interval=5s --timeout=2s --start-period=3s --retries=3 CMD ["/aetherctl", "-e", "http://127.0.0.1:8080", "health"]
+ENTRYPOINT ["/aetherkv"]

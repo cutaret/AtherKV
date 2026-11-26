@@ -1,0 +1,68 @@
+services:
+  n1:
+    build:
+      context: .
+      dockerfile: Dockerfile.aetherkv
+    container_name: aetherkv-n1
+    command:
+      - "-id=n1"
+      - "-data=/data"
+      - "-http=:8080"
+      - "-resp=:6379"
+      - "-raft=0.0.0.0:9001"
+      - "-peers=n1=n1:9001,n2=n2:9001,n3=n3:9001"
+      - "-http-peers=n1=http://n1:8080,n2=http://n2:8080,n3=http://n3:8080"
+      - "-wisckey-threshold=4096"
+      - "-single-fsync=true"
+    ports:
+      - "8081:8080"
+      - "6379:6379"
+    volumes:
+      - aetherkv_n1:/data
+    restart: unless-stopped
+  n2:
+    build:
+      context: .
+      dockerfile: Dockerfile.aetherkv
+    container_name: aetherkv-n2
+    command:
+      - "-id=n2"
+      - "-data=/data"
+      - "-http=:8080"
+      - "-resp=:6379"
+      - "-raft=0.0.0.0:9001"
+      - "-peers=n1=n1:9001,n2=n2:9001,n3=n3:9001"
+      - "-http-peers=n1=http://n1:8080,n2=http://n2:8080,n3=http://n3:8080"
+      - "-wisckey-threshold=4096"
+      - "-single-fsync=true"
+    ports:
+      - "8082:8080"
+      - "6380:6379"
+    volumes:
+      - aetherkv_n2:/data
+    restart: unless-stopped
+  n3:
+    build:
+      context: .
+      dockerfile: Dockerfile.aetherkv
+    container_name: aetherkv-n3
+    command:
+      - "-id=n3"
+      - "-data=/data"
+      - "-http=:8080"
+      - "-resp=:6379"
+      - "-raft=0.0.0.0:9001"
+      - "-peers=n1=n1:9001,n2=n2:9001,n3=n3:9001"
+      - "-http-peers=n1=http://n1:8080,n2=http://n2:8080,n3=http://n3:8080"
+      - "-wisckey-threshold=4096"
+      - "-single-fsync=true"
+    ports:
+      - "8083:8080"
+      - "6381:6379"
+    volumes:
+      - aetherkv_n3:/data
+    restart: unless-stopped
+volumes:
+  aetherkv_n1:
+  aetherkv_n2:
+  aetherkv_n3:
