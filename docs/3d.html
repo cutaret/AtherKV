@@ -6,22 +6,22 @@
   <title>AetherKV — Interactive 3D Raft + WiscKey Simulation</title>
   <style>
     :root {
-      --bg: #050811;
-      --panel: rgba(10, 16, 30, 0.78);
-      --border: rgba(148, 163, 184, 0.18);
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --emerald: #10b981;
-      --cyan: #38bdf8;
-      --amber: #f59e0b;
-      --crimson: #f43f5e;
+      --bg: #f4f6f9;
+      --panel: rgba(255, 255, 255, 0.88);
+      --border: rgba(15, 23, 42, 0.10);
+      --text: #0f172a;
+      --muted: #475569;
+      --emerald: #059669;
+      --blue: #2563eb;
+      --amber: #c2410c;
+      --crimson: #dc2626;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
       width: 100%; height: 100%; overflow: hidden;
-      background: radial-gradient(circle at 50% 35%, #0d162c 0%, #050811 72%);
+      background: radial-gradient(circle at 50% 30%, #ffffff 0%, #eef2f7 70%, #e5ebf3 100%);
       color: var(--text); font-family: var(--sans);
       user-select: none;
     }
@@ -32,34 +32,35 @@
     .node-tag {
       position: absolute;
       transform: translate(-50%, -100%);
-      background: rgba(6, 11, 23, 0.86);
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(255, 255, 255, 0.94);
+      border: 1px solid rgba(15, 23, 42, 0.14);
       border-radius: 8px;
       padding: 6px 10px;
       font-family: var(--mono);
       font-size: 11px;
       line-height: 1.35;
       white-space: nowrap;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.10);
+      color: var(--text);
       transition: border-color 0.2s ease;
     }
     .node-tag .head { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 12px; }
     .node-tag .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
     .node-tag .meta { color: var(--muted); font-size: 10px; margin-top: 2px; }
-    .node-tag.leader { border-color: rgba(16, 185, 129, 0.7); }
-    .node-tag.leader .dot { background: var(--emerald); box-shadow: 0 0 10px var(--emerald); }
-    .node-tag.follower { border-color: rgba(56, 189, 248, 0.45); }
-    .node-tag.follower .dot { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
-    .node-tag.stale { border-color: rgba(244, 63, 94, 0.85); background: rgba(36, 9, 20, 0.9); }
-    .node-tag.stale .dot { background: var(--crimson); box-shadow: 0 0 12px var(--crimson); }
+    .node-tag.leader { border-color: rgba(5, 150, 105, 0.55); }
+    .node-tag.leader .dot { background: var(--emerald); }
+    .node-tag.follower { border-color: rgba(37, 99, 235, 0.35); }
+    .node-tag.follower .dot { background: var(--blue); }
+    .node-tag.stale { border-color: rgba(220, 38, 38, 0.65); background: rgba(254, 242, 242, 0.96); }
+    .node-tag.stale .dot { background: var(--crimson); }
     .node-tag .alert {
-      margin-top: 3px; padding: 1px 5px; border-radius: 4px;
-      background: rgba(244, 63, 94, 0.22); color: #fda4af; font-weight: 700; font-size: 10px;
+      margin-top: 3px; padding: 2px 6px; border-radius: 4px;
+      background: rgba(220, 38, 38, 0.10); color: #b91c1c; font-weight: 700; font-size: 10px;
     }
     .node-tag .recover {
-      margin-top: 3px; padding: 1px 5px; border-radius: 4px;
-      background: rgba(245, 158, 11, 0.22); color: #fcd34d; font-weight: 700; font-size: 10px;
+      margin-top: 3px; padding: 2px 6px; border-radius: 4px;
+      background: rgba(194, 65, 12, 0.10); color: #9a3412; font-weight: 700; font-size: 10px;
     }
     /* Top HUD */
     .hud-top {
@@ -70,17 +71,18 @@
     .brand {
       background: var(--panel); border: 1px solid var(--border);
       border-radius: 12px; padding: 12px 16px; backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
       pointer-events: auto; max-width: 470px;
     }
     .brand-row { display: flex; align-items: center; gap: 10px; }
     .logo-pill {
-      font-family: var(--mono); font-weight: 800; font-size: 13px; letter-spacing: 0.08em;
-      color: #fff; background: linear-gradient(135deg, #10b981, #0ea5e9);
+      font-family: var(--mono); font-weight: 800; font-size: 12px; letter-spacing: 0.08em;
+      color: #ffffff; background: #0f172a;
       padding: 3px 8px; border-radius: 6px;
     }
     .brand-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; }
     .phase-title {
-      margin-top: 8px; font-size: 15px; font-weight: 700; color: #f8fafc;
+      margin-top: 8px; font-size: 15px; font-weight: 700; color: #0f172a;
       display: flex; align-items: center; gap: 8px;
     }
     .phase-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--emerald); flex-shrink: 0; }
@@ -92,19 +94,21 @@
     .metric {
       background: var(--panel); border: 1px solid var(--border);
       border-radius: 10px; padding: 8px 12px; backdrop-filter: blur(12px);
-      min-width: 148px;
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+      min-width: 154px;
     }
     .metric .k { font-family: var(--mono); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-    .metric .v { font-family: var(--mono); font-size: 14px; font-weight: 700; margin-top: 2px; color: #f8fafc; }
-    .metric .v.em { color: #34d399; }
-    .metric .v.am { color: #fbbf24; }
-    .metric .v.cy { color: #38bdf8; }
-    /* Legend pill (bottom-left above timeline) */
+    .metric .v { font-family: var(--mono); font-size: 14px; font-weight: 700; margin-top: 2px; color: #0f172a; }
+    .metric .v.em { color: #047857; }
+    .metric .v.am { color: #b45309; }
+    .metric .v.bl { color: #1d4ed8; }
+    /* Legend pill */
     .legend {
       position: fixed; left: 20px; bottom: 86px;
       display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
       background: var(--panel); border: 1px solid var(--border);
       border-radius: 10px; padding: 7px 12px; backdrop-filter: blur(10px);
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
       font-family: var(--mono); font-size: 11px; color: var(--muted);
       pointer-events: none;
     }
@@ -115,18 +119,19 @@
       position: fixed; left: 20px; right: 20px; bottom: 18px;
       background: var(--panel); border: 1px solid var(--border);
       border-radius: 12px; padding: 10px 14px; backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
       display: flex; flex-direction: column; gap: 8px;
     }
     .timeline-row { display: flex; align-items: center; gap: 12px; }
-    .vtime { font-family: var(--mono); font-size: 12px; color: #f8fafc; min-width: 112px; }
+    .vtime { font-family: var(--mono); font-size: 12px; font-weight: 600; color: #0f172a; min-width: 112px; }
     .bar-wrap {
       position: relative; flex: 1; height: 8px; border-radius: 99px;
-      background: rgba(148, 163, 184, 0.16); overflow: hidden; cursor: pointer;
+      background: rgba(15, 23, 42, 0.08); overflow: hidden; cursor: pointer;
     }
-    .bar-seg { position: absolute; top: 0; bottom: 0; opacity: 0.28; }
+    .bar-seg { position: absolute; top: 0; bottom: 0; opacity: 0.22; }
     .bar-fill {
       position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
-      background: linear-gradient(90deg, #10b981, #38bdf8, #f43f5e, #10b981);
+      background: linear-gradient(90deg, #059669, #2563eb, #dc2626, #059669);
       border-radius: 99px;
     }
     .controls-row {
@@ -135,13 +140,13 @@
     .btn-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     button, a.pill-link {
       font-family: var(--mono); font-size: 11px; font-weight: 600;
-      color: var(--text); background: rgba(30, 41, 59, 0.85);
-      border: 1px solid rgba(148, 163, 184, 0.24); border-radius: 7px;
+      color: var(--text); background: rgba(248, 250, 252, 0.95);
+      border: 1px solid rgba(15, 23, 42, 0.14); border-radius: 7px;
       padding: 5px 10px; cursor: pointer; text-decoration: none;
       transition: background 0.15s, border-color 0.15s;
     }
-    button:hover, a.pill-link:hover { background: rgba(51, 65, 85, 0.95); border-color: rgba(56, 189, 248, 0.55); }
-    button.active { background: rgba(16, 185, 129, 0.2); border-color: var(--emerald); color: #6ee7b7; }
+    button:hover, a.pill-link:hover { background: #e2e8f0; border-color: rgba(37, 99, 235, 0.45); }
+    button.active { background: #0f172a; border-color: #0f172a; color: #ffffff; }
     .hint { font-family: var(--mono); font-size: 11px; color: var(--muted); }
     body.capture-mode .controls-row { display: none; }
     body.capture-mode .legend { bottom: 64px; }
@@ -173,29 +178,29 @@
       </div>
     </div>
     <div class="metrics">
-      <div class="metric"><div class="k">Deterministic Sim</div><div class="v cy">8,174x real-time</div></div>
+      <div class="metric"><div class="k">Deterministic Sim</div><div class="v bl">8,174x real-time</div></div>
       <div class="metric"><div class="k">2 MiB vs Pebble</div><div class="v em">224.2 MiB/s (2.06x)</div></div>
       <div class="metric"><div class="k">WiscKey Write Amp</div><div class="v am">1.00x (VLog Sep)</div></div>
       <div class="metric"><div class="k">Option B Fsyncs</div><div class="v em">-49.9% (+96.4% ops)</div></div>
     </div>
   </div>
   <div class="legend">
-    <span><i class="swatch" style="background:#10b981"></i>Raft Leader</span>
-    <span><i class="swatch" style="background:#38bdf8"></i>Follower / MemTable + LSM</span>
-    <span><i class="swatch" style="background:#f59e0b"></i>WiscKey 2 MiB VLog</span>
-    <span><i class="swatch" style="background:#f43f5e"></i>3-Cut Partition / Stale Leader</span>
+    <span><i class="swatch" style="background:#059669"></i>Raft Leader</span>
+    <span><i class="swatch" style="background:#2563eb"></i>Follower / LSM Stack</span>
+    <span><i class="swatch" style="background:#d97706"></i>WiscKey 2 MiB VLog</span>
+    <span><i class="swatch" style="background:#dc2626"></i>3-Cut Partition / Stale Leader</span>
   </div>
   <div class="hud-bottom">
     <div class="timeline-row">
       <div class="vtime" id="vtime">t = 000.0 ms</div>
       <div class="bar-wrap" id="barWrap">
-        <div class="bar-seg" style="left:0%;width:28%;background:#10b981"></div>
-        <div class="bar-seg" style="left:28%;width:27%;background:#f43f5e"></div>
-        <div class="bar-seg" style="left:55%;width:25%;background:#f59e0b"></div>
-        <div class="bar-seg" style="left:80%;width:20%;background:#38bdf8"></div>
+        <div class="bar-seg" style="left:0%;width:28%;background:#059669"></div>
+        <div class="bar-seg" style="left:28%;width:27%;background:#dc2626"></div>
+        <div class="bar-seg" style="left:55%;width:25%;background:#d97706"></div>
+        <div class="bar-seg" style="left:80%;width:20%;background:#2563eb"></div>
         <div class="bar-fill" id="barFill"></div>
       </div>
-      <div class="vtime" style="text-align:right;color:#94a3b8" id="seedTag">seed=4 · 3/20 faults</div>
+      <div class="vtime" style="text-align:right;color:#475569" id="seedTag">seed=4 · 3/20 faults</div>
     </div>
     <div class="controls-row">
       <div class="btn-group">
@@ -239,16 +244,16 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.04;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     stage.appendChild(renderer.domElement);
-    // Scene & Camera
+    // Classic Architectural Studio Scene
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x050811);
-    scene.fog = new THREE.FogExp2(0x050811, 0.036);
-    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 120);
-    const DEFAULT_CAM = new THREE.Vector3(0.4, 7.6, 12.6);
+    scene.background = new THREE.Color(0xf2f5f9);
+    scene.fog = new THREE.FogExp2(0xf2f5f9, 0.022);
+    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 120);
+    const DEFAULT_CAM = new THREE.Vector3(0.4, 7.6, 12.8);
     camera.position.copy(DEFAULT_CAM);
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = !CAPTURE_MODE;
@@ -257,69 +262,45 @@
     controls.minDistance = 6;
     controls.maxDistance = 24;
     controls.maxPolarAngle = Math.PI * 0.47;
-    // Lighting
-    scene.add(new THREE.AmbientLight(0x94a3b8, 0.75));
-    const hemi = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.85);
+    // Clean Three-Point Studio Lighting
+    scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+    const hemi = new THREE.HemisphereLight(0xffffff, 0xcbd5e1, 0.8);
     scene.add(hemi);
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
-    keyLight.position.set(7, 13, 9);
+    const keyLight = new THREE.DirectionalLight(0xfffaf2, 2.0);
+    keyLight.position.set(8, 15, 10);
     keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.bias = -0.0004;
     keyLight.shadow.camera.near = 2;
-    keyLight.shadow.camera.far = 32;
+    keyLight.shadow.camera.far = 36;
     const d = 10;
     keyLight.shadow.camera.left = -d;
     keyLight.shadow.camera.right = d;
     keyLight.shadow.camera.top = d;
     keyLight.shadow.camera.bottom = -d;
     scene.add(keyLight);
-    const rimCyan = new THREE.PointLight(0x38bdf8, 12, 26, 1.6);
-    rimCyan.position.set(-8, 5, -6);
-    scene.add(rimCyan);
-    const rimAmber = new THREE.PointLight(0xf59e0b, 10, 24, 1.6);
-    rimAmber.position.set(8, 3, 6);
-    scene.add(rimAmber);
-    // Architectural Floor Grid + Subtle Data Disc
-    const floorGeo = new THREE.PlaneGeometry(50, 50);
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x060b17, roughness: 0.88, metalness: 0.2,
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.75);
+    fillLight.position.set(-10, 8, -6);
+    scene.add(fillLight);
+    // Matte Alabaster Studio Floor + Crisp Architectural Grid
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(60, 60),
+      new THREE.MeshStandardMaterial({ color: 0xf4f6fa, roughness: 0.92, metalness: 0.02 })
+    );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
-    const grid = new THREE.GridHelper(32, 32, 0x1e293b, 0x0f172a);
-    grid.position.y = 0.01;
+    const grid = new THREE.GridHelper(32, 32, 0xcbd5e1, 0xe2e8f0);
+    grid.position.y = 0.008;
     scene.add(grid);
     const ringFloor = new THREE.Mesh(
-      new THREE.RingGeometry(4.65, 4.72, 96),
-      new THREE.MeshBasicMaterial({ color: 0x1e3a5f, side: THREE.DoubleSide, transparent: true, opacity: 0.55 })
+      new THREE.RingGeometry(4.65, 4.71, 96),
+      new THREE.MeshBasicMaterial({ color: 0x94a3b8, side: THREE.DoubleSide, transparent: true, opacity: 0.45 })
     );
     ringFloor.rotation.x = -Math.PI / 2;
-    ringFloor.position.y = 0.02;
+    ringFloor.position.y = 0.015;
     scene.add(ringFloor);
-    // Helper: soft radial glow texture for particles
-    function makeGlowTex(hex) {
-      const c = document.createElement('canvas');
-      c.width = 64; c.height = 64;
-      const ctx = c.getContext('2d');
-      const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 30);
-      g.addColorStop(0, '#ffffff');
-      g.addColorStop(0.28, hex);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, 64, 64);
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      return tex;
-    }
-    const glowTextures = {
-      emerald: makeGlowTex('#10b981'),
-      cyan: makeGlowTex('#38bdf8'),
-      amber: makeGlowTex('#f59e0b'),
-      crimson: makeGlowTex('#f43f5e'),
-    };
-    // Cluster Topology: n1 sits isolated on front-left; {n2, n3, n4} form quorum on right/back
+    // Cluster Topology
     const NODE_DEFS = [
       { id: 'n1', pos: new THREE.Vector3(-3.35, 0,  1.55) },
       { id: 'n2', pos: new THREE.Vector3( 2.85, 0,  1.85) },
@@ -327,122 +308,120 @@
       { id: 'n4', pos: new THREE.Vector3(-0.75, 0, -2.55) },
     ];
     const COLORS = {
-      leader:   new THREE.Color(0x10b981),
-      follower: new THREE.Color(0x38bdf8),
-      stale:    new THREE.Color(0xf43f5e),
-      amber:    new THREE.Color(0xf59e0b),
+      leader:   new THREE.Color(0x059669),
+      follower: new THREE.Color(0x2563eb),
+      stale:    new THREE.Color(0xdc2626),
+      amber:    new THREE.Color(0xd97706),
     };
     const nodes = {};
     for (const def of NODE_DEFS) {
       const g = new THREE.Group();
       g.position.copy(def.pos);
       scene.add(g);
-      // 1. Hexagonal Base Plinth
+      // 1. Brushed Aluminum / Slate Hexagonal Base Plinth
       const plinth = new THREE.Mesh(
         new THREE.CylinderGeometry(1.18, 1.32, 0.24, 6),
-        new THREE.MeshStandardMaterial({ color: 0x111a2e, metalness: 0.72, roughness: 0.32 })
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.35, roughness: 0.35 })
       );
       plinth.position.y = 0.12;
       plinth.castShadow = true;
       plinth.receiveShadow = true;
       g.add(plinth);
       // Base status ring
-      const baseRingMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
-      const baseRing = new THREE.Mesh(new THREE.TorusGeometry(1.26, 0.035, 12, 48), baseRingMat);
+      const baseRingMat = new THREE.MeshStandardMaterial({
+        color: 0x2563eb, roughness: 0.28, metalness: 0.25,
+      });
+      const baseRing = new THREE.Mesh(new THREE.TorusGeometry(1.26, 0.04, 14, 48), baseRingMat);
       baseRing.rotation.x = Math.PI / 2;
       baseRing.position.y = 0.05;
       g.add(baseRing);
-      // 2. WiscKey VLog Vault (Bottom Tier: glowing 2 MiB KV-cache blocks arranged radially)
+      // 2. WiscKey VLog Vault (Warm Satin Slate Core + Copper/Amber 2 MiB Blocks)
       const vlogCore = new THREE.Mesh(
         new THREE.CylinderGeometry(0.86, 0.92, 0.62, 24),
-        new THREE.MeshStandardMaterial({
-          color: 0x1c1917, metalness: 0.55, roughness: 0.35,
-          emissive: 0x451a03, emissiveIntensity: 0.45,
-        })
+        new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.35, roughness: 0.42 })
       );
       vlogCore.position.y = 0.58;
       vlogCore.castShadow = true;
+      vlogCore.receiveShadow = true;
       g.add(vlogCore);
       const vlogBlocks = [];
       for (let b = 0; b < 8; b++) {
         const ang = (b / 8) * Math.PI * 2;
         const mat = new THREE.MeshStandardMaterial({
-          color: 0xf59e0b,
-          emissive: 0xf59e0b,
-          emissiveIntensity: 0.65,
-          roughness: 0.25,
-          metalness: 0.3,
+          color: 0xd97706,
+          emissive: 0xb45309,
+          emissiveIntensity: 0.15,
+          roughness: 0.28,
+          metalness: 0.35,
         });
         const blk = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.42, 0.16), mat);
         blk.position.set(Math.cos(ang) * 0.92, 0.58, Math.sin(ang) * 0.92);
         blk.rotation.y = -ang + Math.PI / 2;
+        blk.castShadow = true;
         g.add(blk);
         vlogBlocks.push(blk);
       }
-      // 3. Leveled LSM SSTables (Middle Tier: L2, L1, L0)
+      // 3. Leveled LSM SSTables (Matte Porcelain White + Crisp Slate Hairlines)
       const lsmPlates = [];
       const plateY = [1.14, 1.46, 1.78];
       const plateSize = [1.46, 1.32, 1.18];
+      const plateColors = [0xdbeafe, 0xeff6ff, 0xffffff];
       for (let lvl = 0; lvl < 3; lvl++) {
         const s = plateSize[lvl];
         const pMat = new THREE.MeshStandardMaterial({
-          color: 0x0f1f3a,
-          emissive: 0x0c4a6e,
-          emissiveIntensity: 0.32 + lvl * 0.14,
-          metalness: 0.68,
-          roughness: 0.22,
+          color: plateColors[lvl],
+          metalness: 0.12,
+          roughness: 0.28,
         });
         const plate = new THREE.Mesh(new THREE.BoxGeometry(s, 0.2, s), pMat);
         plate.position.y = plateY[lvl];
         plate.castShadow = true;
+        plate.receiveShadow = true;
         g.add(plate);
         const edges = new THREE.LineSegments(
-          new THREE.EdgesGeometry(new THREE.BoxGeometry(s + 0.01, 0.205, s + 0.01)),
-          new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 })
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(s + 0.008, 0.204, s + 0.008)),
+          new THREE.LineBasicMaterial({ color: 0x64748b, transparent: true, opacity: 0.45 })
         );
         plate.add(edges);
         lsmPlates.push(plate);
       }
-      // 4. MemTable Glass Core (Upper Tier)
-      const memMat = new THREE.MeshPhysicalMaterial({
-        color: 0x38bdf8,
-        emissive: 0x0284c7,
-        emissiveIntensity: 0.55,
-        roughness: 0.12,
-        metalness: 0.1,
-        transmission: 0.45,
-        transparent: true,
-        opacity: 0.88,
+      // 4. MemTable Frosted Sapphire Core
+      const memMat = new THREE.MeshStandardMaterial({
+        color: 0x2563eb,
+        emissive: 0x1d4ed8,
+        emissiveIntensity: 0.12,
+        roughness: 0.18,
+        metalness: 0.22,
       });
       const memCube = new THREE.Mesh(new THREE.BoxGeometry(0.86, 0.56, 0.86), memMat);
       memCube.position.y = 2.28;
       memCube.castShadow = true;
       g.add(memCube);
-      // 5. Vertical Raft WAL Spine Pipe
+      // 5. Vertical Raft WAL Spine Pipe (Brushed Steel)
       const walMat = new THREE.MeshStandardMaterial({
-        color: 0x334155, emissive: 0x0ea5e9, emissiveIntensity: 0.35, metalness: 0.8, roughness: 0.2,
+        color: 0x475569, emissive: 0x000000, emissiveIntensity: 0.0, metalness: 0.7, roughness: 0.25,
       });
-      const walPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.25, 12), walMat);
+      const walPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.25, 14), walMat);
       walPipe.position.set(0.76, 1.35, 0.76);
+      walPipe.castShadow = true;
       g.add(walPipe);
-      // 6. Raft Consensus Crown (Floating Dual Halo)
+      // 6. Raft Consensus Crown (Clean Anodized Ring + Faceted Core)
       const crownGroup = new THREE.Group();
       crownGroup.position.y = 2.98;
       g.add(crownGroup);
       const crownMat = new THREE.MeshStandardMaterial({
-        color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 1.2, roughness: 0.2, metalness: 0.5,
+        color: 0x2563eb, emissive: 0x2563eb, emissiveIntensity: 0.18, roughness: 0.22, metalness: 0.45,
       });
-      const crownOuter = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.055, 14, 48), crownMat);
+      const crownOuter = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.055, 16, 48), crownMat);
       crownOuter.rotation.x = Math.PI / 2;
+      crownOuter.castShadow = true;
       crownGroup.add(crownOuter);
-      const crownInner = new THREE.Mesh(
-        new THREE.OctahedronGeometry(0.22, 0),
-        crownMat
-      );
+      const crownInner = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), crownMat);
+      crownInner.castShadow = true;
       crownGroup.add(crownInner);
-      // 7. 512B Torn-Sector Shockwave Ring (hidden unless n4 tear fires)
+      // 7. 512B Torn-Sector Shockwave Ring
       const tearMat = new THREE.MeshBasicMaterial({
-        color: 0xf43f5e, transparent: true, opacity: 0, side: THREE.DoubleSide,
+        color: 0xdc2626, transparent: true, opacity: 0, side: THREE.DoubleSide,
       });
       const tearRing = new THREE.Mesh(new THREE.RingGeometry(0.95, 1.45, 48), tearMat);
       tearRing.rotation.x = -Math.PI / 2;
@@ -473,7 +452,7 @@
         extraEl: tag.querySelector('.extra'),
       };
     }
-    // Network Links (all 6 pairs; links touching n1 are the 3 Zoo #13 partition cuts)
+    // Network Links
     const LINK_PAIRS = [
       ['n1', 'n2', true],
       ['n1', 'n3', true],
@@ -489,54 +468,60 @@
       const mid = pA.clone().lerp(pB, 0.5);
       mid.y += 1.05;
       const curve = new THREE.QuadraticBezierCurve3(pA, mid, pB);
-      const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.032, 8, false);
-      const tubeMat = new THREE.MeshBasicMaterial({
-        color: 0x38bdf8, transparent: true, opacity: 0.42,
+      const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.032, 10, false);
+      const tubeMat = new THREE.MeshStandardMaterial({
+        color: 0x94a3b8, roughness: 0.4, metalness: 0.2, transparent: true, opacity: 0.65,
       });
       const mesh = new THREE.Mesh(tubeGeo, tubeMat);
       scene.add(mesh);
       links.push({ a, b, isCut, curve, mat: tubeMat });
     }
-    // 3D Crimson Asymmetric Partition Wall (slices cleanly between n1 and {n2, n3, n4})
+    // 3D Frosted Crimson Architectural Partition Plane
     const wallGroup = new THREE.Group();
     wallGroup.position.set(-1.15, 2.0, 0.25);
     wallGroup.rotation.y = -0.68;
     scene.add(wallGroup);
     const wallMat = new THREE.MeshBasicMaterial({
-      color: 0xf43f5e, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false,
+      color: 0xdc2626, transparent: true, opacity: 0.0, side: THREE.DoubleSide, depthWrite: false,
     });
     const wallPlane = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 4.1), wallMat);
     wallGroup.add(wallPlane);
-    const wallFrameMat = new THREE.LineBasicMaterial({ color: 0xfda4af, transparent: true, opacity: 0.0 });
+    const wallFrameMat = new THREE.LineBasicMaterial({ color: 0xb91c1c, transparent: true, opacity: 0.0 });
     const wallFrame = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.PlaneGeometry(7.2, 4.1)),
       wallFrameMat
     );
     wallGroup.add(wallFrame);
-    // Subtle horizontal scanlines inside partition wall
-    const wallScanMat = new THREE.LineBasicMaterial({ color: 0xf43f5e, transparent: true, opacity: 0.0 });
+    const wallScanMat = new THREE.LineBasicMaterial({ color: 0xdc2626, transparent: true, opacity: 0.0 });
     const scanPts = [];
     for (let i = -3; i <= 3; i++) {
       scanPts.push(new THREE.Vector3(-3.6, i * 0.55, 0.01), new THREE.Vector3(3.6, i * 0.55, 0.01));
     }
     const wallScans = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(scanPts), wallScanMat);
     wallGroup.add(wallScans);
-    // Particle Pool for Raft RPCs, WiscKey 2 MiB Blocks, and Blocked Sparks
+    // Solid Glossy 3D Packet Spheres (crisp on light studio background + zero GIF dithering)
+    const packetGeo = new THREE.SphereGeometry(0.14, 16, 16);
+    const PACKET_COLORS = {
+      emerald: 0x059669,
+      blue:    0x2563eb,
+      amber:   0xd97706,
+      crimson: 0xdc2626,
+    };
     const PACKET_POOL = [];
     for (let i = 0; i < 24; i++) {
-      const spriteMat = new THREE.SpriteMaterial({
-        map: glowTextures.emerald,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        opacity: 0,
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x059669,
+        emissive: 0x059669,
+        emissiveIntensity: 0.22,
+        roughness: 0.2,
+        metalness: 0.2,
       });
-      const sp = new THREE.Sprite(spriteMat);
-      sp.scale.set(0.55, 0.55, 1);
-      scene.add(sp);
-      PACKET_POOL.push(sp);
+      const mesh = new THREE.Mesh(packetGeo, mat);
+      mesh.visible = false;
+      mesh.castShadow = true;
+      scene.add(mesh);
+      PACKET_POOL.push(mesh);
     }
-    // Deterministic State Evaluator (pure function of normalized progress t in [0, 1))
     const tmpVec = new THREE.Vector3();
     function smoothstep(edge0, edge1, x) {
       const v = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
@@ -547,11 +532,6 @@
       const vMs = normT * 640.0;
       vtimeEl.textContent = `t = ${vMs.toFixed(1).padStart(5, '0')} ms`;
       barFillEl.style.width = `${(normT * 100).toFixed(2)}%`;
-      // Phase boundaries
-      // P1 [0.00, 0.28): Healthy Quorum + WiscKey 2 MiB writes (n1 Leader, T3)
-      // P2 [0.28, 0.55): 3-Cut Partition isolates n1 from {n2, n3, n4}
-      // P3 [0.55, 0.80): n2 elected Leader (T4); n1 Stale Leader split-brain; n4 512B torn sector
-      // P4 [0.80, 1.00): Partition heals; n1 steps down to Follower (T4); logs reconcile
       const partAlpha =
         normT < 0.28 ? 0 :
         normT < 0.33 ? smoothstep(0.28, 0.33, normT) :
@@ -559,31 +539,29 @@
         normT < 0.84 ? 1 - smoothstep(0.78, 0.84, normT) : 0;
       const splitActive = normT >= 0.55 && normT < 0.82;
       const tearPulse = normT >= 0.62 && normT < 0.76 ? (normT - 0.62) / 0.14 : -1;
-      // Update Phase Banner
       if (normT < 0.28) {
-        phaseDotEl.style.background = '#10b981';
+        phaseDotEl.style.background = '#059669';
         phaseTitleEl.textContent = 'Phase 1 — Healthy Quorum & 2 MiB WiscKey Writes';
         phaseDescEl.textContent = 'Leader n1 (Term 3) replicates 2 MiB Llama-3 KV-cache blocks straight to WiscKey VLogs (1.00x write amp) across all 4 nodes.';
       } else if (normT < 0.55) {
-        phaseDotEl.style.background = '#f43f5e';
+        phaseDotEl.style.background = '#dc2626';
         phaseTitleEl.textContent = 'Phase 2 — Bug Zoo #13 · 3-Cut Asymmetric Partition';
         phaseDescEl.textContent = 'Delta-shrunk nemesis slices links n1↔{n2, n3, n4}. Heartbeats from n1 collide with the partition barrier while {n2, n3, n4} retain quorum.';
       } else if (normT < 0.80) {
-        phaseDotEl.style.background = '#f59e0b';
+        phaseDotEl.style.background = '#c2410c';
         phaseTitleEl.textContent = 'Phase 3 — Split-Brain Caught + 512B Sector Tear Recovery';
         phaseDescEl.textContent = 'Quorum elects n2 (Term 4). Porcupine flags isolated n1 serving a stale read while n4 survives a 512B 0xAA WAL sector tear via CRC32.';
       } else {
-        phaseDotEl.style.background = '#38bdf8';
+        phaseDotEl.style.background = '#2563eb';
         phaseTitleEl.textContent = 'Phase 4 — Partition Healed & Raft Log Reconciled';
         phaseDescEl.textContent = 'Links restore, n1 steps down cleanly to Term 4 Follower, and the cluster converges with 100% SHA-256 deterministic trace parity.';
       }
       // Update Partition Wall
-      wallMat.opacity = partAlpha * 0.18;
-      wallFrameMat.opacity = partAlpha * 0.85;
-      wallScanMat.opacity = partAlpha * 0.35;
+      wallMat.opacity = partAlpha * 0.14;
+      wallFrameMat.opacity = partAlpha * 0.75;
+      wallScanMat.opacity = partAlpha * 0.28;
       wallGroup.position.y = 2.0 + (1 - partAlpha) * 2.5;
       wallGroup.visible = partAlpha > 0.01;
-      // Per-node Roles, Terms, Indices & Visual Glow
       const commitIdx = Math.floor(12 + normT * 28);
       const roleOf = {
         n1: normT < 0.55 ? 'leader' : (normT < 0.82 ? 'stale' : 'follower'),
@@ -604,31 +582,29 @@
         nd.crownMat.color.copy(col);
         nd.crownMat.emissive.copy(col);
         nd.baseRingMat.color.copy(col);
+        nd.memMat.color.copy(role === 'stale' ? COLORS.stale : (role === 'leader' ? COLORS.leader : COLORS.follower));
         const phaseOff = id.charCodeAt(1) * 1.1;
-        nd.crownGroup.position.y = 2.98 + Math.sin(normT * Math.PI * 8 + phaseOff) * 0.09;
+        nd.crownGroup.position.y = 2.98 + Math.sin(normT * Math.PI * 8 + phaseOff) * 0.08;
         nd.crownInner.rotation.y = normT * Math.PI * 6 + phaseOff;
         nd.crownInner.rotation.x = normT * Math.PI * 3;
-        nd.crownGroup.scale.setScalar(role === 'leader' || role === 'stale' ? 1.14 : 0.88);
-        // MemTable + WiscKey VLog pulse on active writes
-        const writePulse = 0.45 + 0.45 * Math.sin(normT * Math.PI * 16 + phaseOff);
-        nd.memMat.emissiveIntensity = role === 'stale' ? 0.25 : 0.45 + writePulse * 0.4;
+        nd.crownGroup.scale.setScalar(role === 'leader' || role === 'stale' ? 1.12 : 0.88);
         nd.vlogBlocks.forEach((blk, idx) => {
           const active = ((normT * 24 + idx * 0.35) % 1);
           const isLit = role !== 'stale' || idx < 3;
-          blk.material.emissiveIntensity = isLit ? (0.35 + 0.85 * Math.sin(active * Math.PI)) : 0.12;
+          blk.material.emissiveIntensity = isLit ? (0.08 + 0.38 * Math.sin(active * Math.PI)) : 0.0;
         });
-        // 512B torn-sector shockwave on n4
         if (id === 'n4' && tearPulse >= 0) {
-          nd.tearMat.opacity = (1 - tearPulse) * 0.95;
+          nd.tearMat.opacity = (1 - tearPulse) * 0.85;
           nd.tearRing.scale.setScalar(1.0 + tearPulse * 2.1);
-          nd.walMat.emissive.setHex(tearPulse < 0.55 ? 0xf43f5e : 0xf59e0b);
-          nd.walMat.emissiveIntensity = 1.6;
+          nd.walMat.color.setHex(tearPulse < 0.55 ? 0xdc2626 : 0xd97706);
+          nd.walMat.emissive.setHex(tearPulse < 0.55 ? 0xdc2626 : 0xd97706);
+          nd.walMat.emissiveIntensity = 0.4;
         } else {
           nd.tearMat.opacity = 0;
-          nd.walMat.emissive.setHex(0x0ea5e9);
-          nd.walMat.emissiveIntensity = 0.35;
+          nd.walMat.color.setHex(0x475569);
+          nd.walMat.emissive.setHex(0x000000);
+          nd.walMat.emissiveIntensity = 0.0;
         }
-        // Update floating HTML label
         nd.tag.className = `node-tag ${role}`;
         const roleTxt = role === 'leader' ? 'LEADER' : role === 'stale' ? 'STALE LEADER' : 'FOLLOWER';
         nd.titleEl.textContent = `${id} · ${roleTxt}`;
@@ -647,61 +623,57 @@
       // Update Links
       for (const lk of links) {
         if (lk.isCut && partAlpha > 0.1) {
-          lk.mat.color.setHex(0xf43f5e);
-          lk.mat.opacity = 0.14 + 0.18 * (1 - partAlpha);
+          lk.mat.color.setHex(0xdc2626);
+          lk.mat.opacity = 0.20 + 0.25 * (1 - partAlpha);
         } else {
-          lk.mat.color.setHex(normT >= 0.55 ? 0x10b981 : 0x38bdf8);
-          lk.mat.opacity = 0.45;
+          lk.mat.color.setHex(normT >= 0.55 ? 0x059669 : 0x64748b);
+          lk.mat.opacity = 0.55;
         }
       }
-      // Update Packets Deterministically
+      // Update Solid 3D Packets Deterministically
       let pIdx = 0;
-      const emitPacket = (curve, u, tex, scale, reverse = false) => {
+      const emitPacket = (curve, u, colorKey, scale, reverse = false) => {
         if (pIdx >= PACKET_POOL.length) return;
-        const sp = PACKET_POOL[pIdx++];
+        const m = PACKET_POOL[pIdx++];
         const posU = reverse ? (1 - u) : u;
         curve.getPoint(Math.max(0, Math.min(1, posU)), tmpVec);
-        sp.position.copy(tmpVec);
-        sp.material.map = tex;
-        sp.material.opacity = Math.sin(u * Math.PI) * 0.98;
-        sp.scale.set(scale, scale, 1);
+        m.position.copy(tmpVec);
+        m.material.color.setHex(PACKET_COLORS[colorKey]);
+        m.material.emissive.setHex(PACKET_COLORS[colorKey]);
+        const s = scale * Math.sin(Math.max(0.05, Math.min(0.95, u)) * Math.PI);
+        m.scale.setScalar(Math.max(0.25, s));
+        m.visible = true;
       };
       const activeLeader = normT < 0.55 ? 'n1' : 'n2';
       for (let li = 0; li < links.length; li++) {
         const lk = links[li];
-        // Cut links during partition: n1 packets hit wall at u=0.44 and spark crimson
         if (lk.isCut && partAlpha > 0.5) {
           if (normT < 0.80) {
             const rawU = ((normT * 10 + li * 0.27) % 1);
             const hitU = Math.min(rawU * 0.85, 0.44);
             const isSpark = rawU > 0.52;
-            emitPacket(lk.curve, hitU, glowTextures.crimson, isSpark ? 0.85 : 0.46, false);
+            emitPacket(lk.curve, hitU, 'crimson', isSpark ? 1.35 : 0.85, false);
           }
           continue;
         }
-        // Healthy traffic along links touching the active leader
         if (lk.a === activeLeader || lk.b === activeLeader) {
           const rev = lk.b === activeLeader;
-          // Raft AppendEntries (emerald)
           const u1 = (normT * 9 + li * 0.19) % 1;
-          emitPacket(lk.curve, u1, glowTextures.emerald, 0.52, rev);
-          // WiscKey 2 MiB Block Replication (amber)
+          emitPacket(lk.curve, u1, 'emerald', 0.95, rev);
           const u2 = (normT * 9 + li * 0.19 + 0.5) % 1;
-          emitPacket(lk.curve, u2, glowTextures.amber, 0.64, rev);
+          emitPacket(lk.curve, u2, 'amber', 1.15, rev);
         } else {
-          // Light gossip / ack pulse on peer edges
           const u3 = (normT * 6 + li * 0.33) % 1;
-          emitPacket(lk.curve, u3, glowTextures.cyan, 0.36, false);
+          emitPacket(lk.curve, u3, 'blue', 0.72, false);
         }
       }
       for (; pIdx < PACKET_POOL.length; pIdx++) {
-        PACKET_POOL[pIdx].material.opacity = 0;
+        PACKET_POOL[pIdx].visible = false;
       }
-      // Smooth Seamless Camera Orbit (t=0 matches t=1 identically for seamless GIF looping)
       if (applyOrbit) {
         const theta = Math.sin(normT * Math.PI * 2) * 0.46 + 0.06;
-        const radius = 12.6 - Math.sin(normT * Math.PI * 2) * 0.85;
-        const elev = 7.35 + Math.cos(normT * Math.PI * 2) * 0.55;
+        const radius = 12.8 - Math.sin(normT * Math.PI * 2) * 0.85;
+        const elev = 7.4 + Math.cos(normT * Math.PI * 2) * 0.55;
         camera.position.set(
           Math.sin(theta) * radius,
           elev,
@@ -712,7 +684,6 @@
         controls.update();
       }
       renderer.render(scene, camera);
-      // Project 3D Node Anchor Positions to Screen Coordinates for Crisp HTML Labels
       const w = window.innerWidth;
       const h = window.innerHeight;
       for (const id of ['n1', 'n2', 'n3', 'n4']) {
@@ -729,7 +700,6 @@
         nd.tag.style.top = `${sy.toFixed(1)}px`;
       }
     }
-    // Interactive Controls
     let playing = !CAPTURE_MODE;
     let autoOrbit = true;
     let progress = 0;
@@ -774,12 +744,10 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       updateScene(progress, autoOrbit);
     });
-    // Deterministic Capture Hook for Playwright
     window.__setCaptureProgress = (t) => {
       progress = t;
       updateScene(t, true);
     };
-    // Initial render
     updateScene(0, true);
     window.__AETHER_READY = true;
     if (!CAPTURE_MODE) {
