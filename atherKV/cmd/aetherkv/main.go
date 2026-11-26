@@ -1,102 +1,217 @@
 package main
 
 import (
-	"context"
-	"flag"
+	"bufio"
+	"bytes"
 	"fmt"
-	"log"
-	"net/http"
+	"io"
+	"net"
+	"net/http/httptest"
 	"os"
-	"os/signal"
+	"path/filepath"
+	"strconv"
 	"strings"
-	"syscall"
+	"testing"
 	"time"
 )
 
-func parsePeerMap(raw string) map[string]string {
-	out := make(map[string]string)
-	for _, part := range strings.Split(raw, ",") {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		id, addr, ok := strings.Cut(part, "=")
-		if !ok {
-			continue
-		}
-		id = strings.TrimSpace(id)
-		addr = strings.TrimSpace(addr)
-		if id != "" && addr != "" {
-			out[id] = addr
-		}
+func encodeRESP(args ...string) []byte {
+	var b bytes.Buffer
+	fmt.Fprintf(&b, "*%d\r\n", len(args))
+	for _, a := range args {
+		fmt.Fprintf(&b, "$%d\r\n%s\r\n", len(a), a)
 	}
-	return out
+	return b.Bytes()
 }
 
-func main() {
-	id := flag.String("id", "n1", "Unique cluster node ID (e.g. n1, n2, n3)")
-	dataDir := flag.String("data", "./aetherkv-data/n1", "Directory for persistent Raft WAL, LSM SSTables, and WiscKey VLog")
-	httpAddr := flag.String("http", ":8080", "HTTP client API listen address")
-	raftAddr := flag.String("raft", "127.0.0.1:9001", "Raft peer-to-peer TCP listen address")
-	peersFlag := flag.String("peers", "", "Comma-separated Raft peer map: n1=127.0.0.1:9001,n2=127.0.0.1:9002,n3=127.0.0.1:9003")
-	httpPeersFlag := flag.String("http-peers", "", "Comma-separated HTTP peer map for leader forwarding: n1=http://127.0.0.1:8081,n2=http://127.0.0.1:8082")
-	tickMs := flag.Int("tick-ms", 10, "Raft logical tick interval in milliseconds")
-	opTimeoutMs := flag.Int("op-timeout-ms", 5000, "Client operation timeout in milliseconds")
-	wiscKeyBytes := flag.Int("wisckey-threshold", 4096, "Separate values >= N bytes into WiscKey VLog (0 disables separation)")
-	singleFsync := flag.Bool("single-fsync", false, "Enable Option B durability (Raft WAL sync + FlushedIndex truncation fence)")
-	seed := flag.Uint64("seed", 0, "Optional PRNG seed (0 uses crypto/rand)")
-	flag.Parse()
-
-	peers := parsePeerMap(*peersFlag)
-	if len(peers) == 0 {
-		peers[*id] = *raftAddr
-	}
-	httpPeers := parsePeerMap(*httpPeersFlag)
-
-	node, err := NewNode(Config{
-		NodeID:           *id,
-		DataDir:          *dataDir,
-		HTTPAddr:         *httpAddr,
-		RaftAddr:         *raftAddr,
-		Peers:            peers,
-		HTTPPeers:        httpPeers,
-		TickInterval:     time.Duration(*tickMs) * time.Millisecond,
-		OpTimeout:        time.Duration(*opTimeoutMs) * time.Millisecond,
-		WiscKeyThreshold: *wiscKeyBytes,
-		SingleFsync:      *singleFsync,
-		Seed:             *seed,
-	})
+func readRESPValue(r *bufio.Reader) (string, error) {
+	line, err := r.ReadString('\n')
 	if err != nil {
-		log.Fatalf("aetherkv startup failed: %v", err)
+		return "", err
 	}
-
-	srv := &http.Server{
-		Addr:              *httpAddr,
-		Handler:           node.Handler(),
-		ReadHeaderTimeout: 5 * time.Second,
+	line = strings.TrimRight(line, "\r\n")
+	if len(line) == 0 {
+		return "", io.ErrUnexpectedEOF
 	}
+	switch line[0] {
+	case '+', '-', ':':
+		return line, nil
+	case '$':
+		n, err := strconv.Atoi(line[1:])
+		if err != nil {
+			return "", err
+		}
+		if n < 0 {
+			return "NULL", nil
+		}
+		buf := make([]byte, n+2)
+		if _, err := io.ReadFull(r, buf); err != nil {
+			return "", err
+		}
+		return string(buf[:n]), nil
+	case '*':
+		n, err := strconv.Atoi(line[1:])
+		if err != nil {
+			return "", err
+		}
+		parts := make([]string, 0, n)
+		for i := 0; i < n; i++ {
+			v, err := readRESPValue(r)
+			if err != nil {
+				return "", err
+			}
+			parts = append(parts, v)
+		}
+		return "[" + strings.Join(parts, ",") + "]", nil
+	default:
+		return line, nil
+	}
+}
 
-	errCh := make(chan error, 1)
-	go func() {
-		fmt.Printf("AetherKV node=%s listening http=%s raft=%s data=%s peers=%d wisckey>=%dB single-fsync=%v\n",
-			*id, *httpAddr, node.RaftAddr(), *dataDir, len(peers), *wiscKeyBytes, *singleFsync)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			errCh <- err
+func TestRESP2ThreeNodeFollowerForwardingAndWiscKey(t *testing.T) {
+	baseDir, err := os.MkdirTemp("", "aetherkv-resp-test-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.RemoveAll(baseDir) }()
+
+	ids := []string{"n1", "n2", "n3"}
+	nodes := make(map[string]*Node, 3)
+	httpSrvs := make(map[string]*httptest.Server, 3)
+	respSrvs := make(map[string]*RESPServer, 3)
+	raftPeers := make(map[string]string, 3)
+	httpPeers := make(map[string]string, 3)
+
+	for i, id := range ids {
+		n, err := NewNode(Config{
+			NodeID:           id,
+			DataDir:          filepath.Join(baseDir, id),
+			RaftAddr:         "127.0.0.1:0",
+			Peers:            map[string]string{"n1": "", "n2": "", "n3": ""},
+			TickInterval:     10 * time.Millisecond,
+			OpTimeout:        3 * time.Second,
+			WiscKeyThreshold: 4096,
+			Seed:             uint64(200 + i),
+		})
+		if err != nil {
+			t.Fatalf("start node %s: %v", id, err)
+		}
+		hs := httptest.NewServer(n.Handler())
+		rs, err := NewRESPServer(n, "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("start resp %s: %v", id, err)
+		}
+		nodes[id] = n
+		httpSrvs[id] = hs
+		respSrvs[id] = rs
+		raftPeers[id] = n.RaftAddr()
+		httpPeers[id] = hs.URL
+	}
+	defer func() {
+		for _, id := range ids {
+			_ = respSrvs[id].Close()
+			httpSrvs[id].Close()
+			_ = nodes[id].Close()
 		}
 	}()
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-
-	select {
-	case sig := <-sigCh:
-		fmt.Printf("\nReceived %s, flushing LSM and shutting down node %s...\n", sig, *id)
-	case err := <-errCh:
-		log.Printf("HTTP server error: %v", err)
+	for _, id := range ids {
+		nodes[id].UpdatePeers(raftPeers, httpPeers)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	_ = srv.Shutdown(ctx)
-	_ = node.Close()
+	var leaderID, followerID string
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		for _, id := range ids {
+			if nodes[id].IsLeader() {
+				leaderID = id
+				break
+			}
+		}
+		if leaderID != "" {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	if leaderID == "" {
+		t.Fatal("cluster failed to elect leader within 5s")
+	}
+	for _, id := range ids {
+		if id != leaderID {
+			followerID = id
+			break
+		}
+	}
+
+	// Connect over raw TCP directly to a FOLLOWER's RESP2 port
+	conn, err := net.DialTimeout("tcp", respSrvs[followerID].Addr(), 2*time.Second)
+	if err != nil {
+		t.Fatalf("dial follower RESP2: %v", err)
+	}
+	defer conn.Close()
+	r := bufio.NewReader(conn)
+
+	send := func(args ...string) string {
+		t.Helper()
+		if _, err := conn.Write(encodeRESP(args...)); err != nil {
+			t.Fatalf("write %v: %v", args, err)
+		}
+		got, err := readRESPValue(r)
+		if err != nil {
+			t.Fatalf("read response for %v: %v", args, err)
+		}
+		return got
+	}
+
+	// 1. Handshake & inline PING
+	if got := send("COMMAND", "DOCS"); got != "[]" {
+		t.Fatalf("COMMAND DOCS = %q, want []", got)
+	}
+	if got := send("PING"); got != "+PONG" {
+		t.Fatalf("PING = %q, want +PONG", got)
+	}
+	if _, err := conn.Write([]byte("PING hello-inline\r\n")); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := readRESPValue(r); err != nil || got != "hello-inline" {
+		t.Fatalf("inline PING = %q (err=%v), want hello-inline", got, err)
+	}
+
+	// 2. SET + GET large 8 KiB WiscKey value via follower
+	bigVal := strings.Repeat("Z", 8192)
+	if got := send("SET", "kv/llama3/token0", bigVal); got != "+OK" {
+		t.Fatalf("SET bigVal = %q, want +OK", got)
+	}
+	if got := send("GET", "kv/llama3/token0"); got != bigVal {
+		t.Fatalf("GET bigVal len=%d, want %d", len(got), len(bigVal))
+	}
+
+	// 3. MSET, MGET, EXISTS, KEYS, SCAN, DEL
+	if got := send("MSET", "user:1", "alice", "user:2", "bob", "other:1", "x"); got != "+OK" {
+		t.Fatalf("MSET = %q, want +OK", got)
+	}
+	if got := send("MGET", "user:1", "missing", "user:2"); got != "[alice,NULL,bob]" {
+		t.Fatalf("MGET = %q, want [alice,NULL,bob]", got)
+	}
+	if got := send("EXISTS", "user:1", "user:2", "nope"); got != ":2" {
+		t.Fatalf("EXISTS = %q, want :2", got)
+	}
+	if got := send("KEYS", "user:*"); got != "[user:1,user:2]" {
+		t.Fatalf("KEYS user:* = %q, want [user:1,user:2]", got)
+	}
+	if got := send("SCAN", "0", "MATCH", "user:*", "COUNT", "10"); got != "[0,[user:1,user:2]]" {
+		t.Fatalf("SCAN = %q, want [0,[user:1,user:2]]", got)
+	}
+	if got := send("DEL", "user:1", "missing"); got != ":1" {
+		t.Fatalf("DEL = %q, want :1", got)
+	}
+	if got := send("GET", "user:1"); got != "NULL" {
+		t.Fatalf("GET after DEL = %q, want NULL", got)
+	}
+
+	// 4. INFO reports AetherKV metadata
+	info := send("INFO")
+	if !strings.Contains(info, "engine:aetherkv") || !strings.Contains(info, "role:follower") {
+		t.Fatalf("unexpected INFO payload: %q", info)
+	}
 }
