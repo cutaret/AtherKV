@@ -37,18 +37,6 @@ type File interface {
 // OSFS implements FS directly using the host operating system.
 type OSFS struct{}
 
-func (o *OSFS) SyncDir(dir string) error {
-	if runtime.GOOS == "windows" {
-		return nil
-	}
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	return d.Sync()
-}
-
 func NewOSFS() *OSFS { return &OSFS{} }
 
 func (o *OSFS) Open(name string) (File, error) {
@@ -88,6 +76,9 @@ func (o *OSFS) List(dir string) ([]string, error) {
 }
 
 func (o *OSFS) SyncDir(dir string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
 	d, err := os.Open(dir)
 	if err != nil {
 		return err
