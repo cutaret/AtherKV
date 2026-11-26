@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"runtime"
 )
 
 var (
@@ -35,6 +36,18 @@ type File interface {
 
 // OSFS implements FS directly using the host operating system.
 type OSFS struct{}
+
+func (o *OSFS) SyncDir(dir string) error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	return d.Sync()
+}
 
 func NewOSFS() *OSFS { return &OSFS{} }
 
