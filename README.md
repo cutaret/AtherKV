@@ -42,6 +42,56 @@ _(From the repository root `AtherKV/`, you can also run `make lint`, `make test`
 
 ---
 
+## Run AetherKV as a Real Database (3-Node Cluster, CLI & Redis RESP2)
+
+Download static binaries for Linux, macOS, and Windows from **[GitHub Releases](https://github.com/cutaret/AtherKV/releases)**, build locally (`make build`), or boot a persistent 3-node Raft + WiscKey cluster in one command:
+
+```bash
+# Start 3 persistent nodes (HTTP on 8081-8083, Redis RESP2 on 6379-6381, Option B single-fsync ON)
+docker compose up -d --build
+```
+
+### Talk to the Cluster with `redis-cli` (Zero-Dependency RESP2)
+
+Requests sent to any follower transparently forward to the active Raft leader:
+
+```bash
+redis-cli -p 6379 SET kv/llama3/layer0 "tensor-payload"
+redis-cli -p 6380 GET kv/llama3/layer0
+redis-cli -p 6379 SCAN 0 MATCH "kv/*" COUNT 10
+redis-cli -p 6379 INFO
+```
+
+### Talk to the Cluster with `aetherctl` or HTTP
+
+```bash
+export AETHERKV_ENDPOINTS="[http://127.0.0.1:8081](http://127.0.0.1:8081),[http://127.0.0.1:8082](http://127.0.0.1:8082),[http://127.0.0.1:8083](http://127.0.0.1:8083)"
+
+# Check Raft leadership, applied index, and fsync counters across all 3 nodes
+./bin/aetherctl status
+
+# Linearizable PUT (supports stdin '-' for large WiscKey blobs), GET, CAS, and SCAN
+./bin/aetherctl put config/mode "v1"
+./bin/aetherctl cas config/mode "v1" "v2"
+./bin/aetherctl scan -start config/ -limit 10
+
+# Or use plain curl against any node (followers forward automatically)
+curl -X PUT [http://127.0.0.1:8082/v1/kv/hello](http://127.0.0.1:8082/v1/kv/hello) -d "world"
+curl [http://127.0.0.1:8083/v1/kv/hello](http://127.0.0.1:8083/v1/kv/hello)
+
+# Test live crash failover on real disk volumes
+docker kill aetherkv-n1
+./bin/aetherctl status
+./bin/aetherctl get config/mode
+```
+
+### Single-Node Local Server
+
+```bash
+cd atherKV
+go run ./cmd/aetherkv -id n1 -data ./aetherkv-data/n1 -http :8080 -resp :6379 -single-fsync
+```
+
 ## Architecture & Mechanical Determinism Enforcement
 
 Every package above the host-interface seam (`raft`, `lsm`, `kv`, `statemachine`) is a pure state machine with zero direct access to the operating system. All external side effects cross five explicit interfaces defined in `atherKV/sim/interfaces.go` and `atherKV/vfs/vfs.go`:

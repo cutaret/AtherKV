@@ -1,0 +1,63 @@
+name: Release Binaries
+on:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+jobs:
+  verify-and-release:
+    name: Build & Publish Cross-Platform Binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: atherKV/go.mod
+      - name: Run detlint & full test suite before release
+        working-directory: atherKV
+        run: |
+          go run ./cmd/detlint statemachine raft lsm kv
+          go test -p 1 ./... -count=1
+      - name: Cross-compile static release archives
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          TARGETS="linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64"
+          BINS="aetherkv aetherctl detlint aether_check simrun"
+          for target in $TARGETS; do
+            GOOS="${target%/*}"
+            GOARCH="${target#*/}"
+            EXT=""
+            if [ "$GOOS" = "windows" ]; then EXT=".exe"; fi
+            STAGE="dist/aetherkv_${TAG}_${GOOS}_${GOARCH}"
+            mkdir -p "$STAGE"
+            for bin in $BINS; do
+              (
+                cd atherKV
+                CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" \
+                  go build -trimpath -ldflags="-s -w" -o "../${STAGE}/${bin}${EXT}" "./cmd/${bin}"
+              )
+            done
+            cp README.md docker-compose.yml "$STAGE/"
+            if [ "$GOOS" = "windows" ]; then
+              (cd dist && zip -qr "aetherkv_${TAG}_${GOOS}_${GOARCH}.zip" "aetherkv_${TAG}_${GOOS}_${GOARCH}")
+            else
+              tar -C dist -czf "dist/aetherkv_${TAG}_${GOOS}_${GOARCH}.tar.gz" "aetherkv_${TAG}_${GOOS}_${GOARCH}"
+            fi
+            rm -rf "$STAGE"
+          done
+          (cd dist && sha256sum *.tar.gz *.zip > checksums.txt)
+          ls -lh dist/
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" dist/* \
+            --title "AetherKV $TAG" \
+            --generate-notes

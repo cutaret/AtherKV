@@ -1,5 +1,15 @@
-.PHONY: lint test race fuzz sim-zoo13 bench-os bench-sim bench-pebble playground clean
+.PHONY: build run-node up down lint test race fuzz sim-zoo13 bench-os bench-sim bench-pebble playground
 GO_DIR := atherKV
+build:
+	mkdir -p bin
+	cd $(GO_DIR) && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o ../bin/aetherkv ./cmd/aetherkv
+	cd $(GO_DIR) && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o ../bin/aetherctl ./cmd/aetherctl
+run-node:
+	cd $(GO_DIR) && go run ./cmd/aetherkv -id n1 -data ./aetherkv-data/n1 -http :8080 -resp :6379 -single-fsync
+up:
+	docker compose up -d --build
+down:
+	docker compose down -v
 lint:
 	cd $(GO_DIR) && go run ./cmd/detlint statemachine raft lsm kv
 test:
