@@ -9,8 +9,8 @@ const OUT_DIR = path.join(DOCS_DIR, 'assets');
 const TMP_DIR = path.join(ROOT, '.tmp-3d-frames');
 const TOTAL_FRAMES = 200; // 10 seconds @ 20fps — seamless loop
 const FPS = 20;
-const WIDTH = 1200;
-const HEIGHT = 675;
+const WIDTH = 1280;
+const HEIGHT = 720;
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -74,7 +74,7 @@ execFileSync('ffmpeg', [
   '-y',
   '-framerate', String(FPS),
   '-i', inputPattern,
-  '-vf', `fps=${FPS},scale=960:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=192:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle`,
+  '-vf', `fps=${FPS},scale=960:540:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=192:stats_mode=diff[p];[s1][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle`,
   '-loop', '0',
   gifOut,
 ], { stdio: 'inherit' });
@@ -92,3 +92,4 @@ execFileSync('ffmpeg', [
 fs.rmSync(TMP_DIR, { recursive: true, force: true });
 console.log('Generated:', gifOut, `(${(fs.statSync(gifOut).size / 1024 / 1024).toFixed(2)} MiB)`);
 console.log('Generated:', mp4Out, `(${(fs.statSync(mp4Out).size / 1024 / 1024).toFixed(2)} MiB)`);
+
